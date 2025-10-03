@@ -11,7 +11,7 @@ import fs, { readdirSync, statSync, unlinkSync, existsSync, mkdirSync, readFileS
 import yargs from 'yargs'
 import { spawn, execSync } from 'child_process'
 import lodash from 'lodash'
-// import { vegetaJadiBot } from './plugins/jadibot-serbot.js' // ⬅️ LÍNEA COMENTADA PARA EVITAR EL ERROR
+// import { vegetaJadiBot from './plugins/jadibot-serbot.js' // ⬅️ LÍNEA COMENTADA PARA EVITAR EL ERROR
 import chalk from 'chalk'
 import syntaxerror from 'syntax-error'
 import { tmpdir } from 'os'
@@ -22,9 +22,9 @@ import pino from 'pino'
 import Pino from 'pino'
 import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
+// import { mongoDB, mongoDBV2 } from './lib/mongoDB.js' // ⬅️ LÍNEA ELIMINADA: Ya no se importa mongoDB.js
 import { makeWASocket, protoType, serialize } from './lib/simple.js'
 import { Low, JSONFile } from 'lowdb'
-import { mongoDB, mongoDBV2 } from './lib/mongoDB.js'
 import store from './lib/store.js'
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
@@ -64,6 +64,7 @@ const __dirname = global.__dirname(import.meta.url)
 global.opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
 global.prefix = new RegExp('^[#!./]')
 
+// ESTA ES TU BASE DE DATOS JSON (LOWDB) POR DEFECTO
 global.db = new Low(/https?:\/\//.test(opts['db'] || '') ? new cloudDBAdapter(opts['db']) : new JSONFile('database.json'))
 global.DATABASE = global.db; 
 global.loadDatabase = async function loadDatabase() {

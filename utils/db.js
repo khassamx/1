@@ -320,28 +320,3 @@ global.reload = async (_ev, filename) => {
         }
     }
 }
-
-Object.freeze(global.reload)
-watch(pluginFolder, global.reload)
-await global.reloadHandler()
-```eof
-
----
-
-## 🎯 Instrucciones Finales
-
-Con esto, el proyecto está libre de LowDB y usa una solución de base de datos nativa y estable.
-
-**Pasos a seguir:**
-
-1.  **Desinstala LowDB:** Es vital para que no siga intentando usar la librería.
-    ```bash
-    npm uninstall lowdb
-    ```
-2.  Asegúrate de que tus archivos `utils/db.js` y `index.js` contengan el código de este mensaje.
-3.  **Ejecuta el bot:**
-    ```bash
-    node index.js
-    ```
-
-¡Este debería ser el intento definitivo! Por favor, dime si ya puedes ver las opciones de conexión. ¡Estamos ansiosos por ver al bot en línea!

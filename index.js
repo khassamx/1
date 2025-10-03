@@ -40,17 +40,22 @@ async function startBot() {
 
     const sock = makeWASocket({
         auth: state,
-        version
+        version,
+        printQRInTerminal: false, // Desactivamos QR automático
+        logger: { level: "silent" } // Elimina logs feos de Baileys
     });
 
-    // 🔹 Mostrar QR en terminal
+    // 🔹 Mostrar QR solo si hace falta
     sock.ev.on("connection.update", ({ qr, connection }) => {
         if (qr) {
-            console.log("📲 Escanea este QR con tu WhatsApp:\n");
+            console.log("\n📲 Escanea este QR con tu WhatsApp:\n");
             qrcode.generate(qr, { small: true });
         }
         if (connection === "open") {
-            console.log("✅ Bot conectado correctamente.");
+            console.log("\n✅ Bot conectado correctamente.\n");
+        }
+        if (connection === "close") {
+            console.log("\n⚠️ Conexión cerrada. Escanea QR si es necesario.\n");
         }
     });
 
@@ -74,7 +79,7 @@ async function startBot() {
                 try {
                     await plugins[cmd].run(sock, m, from, args);
                 } catch (err) {
-                    console.error("❌ Error en plugin:", err);
+                    console.error("❌ Error en plugin:", err.message || err);
                     await sock.sendMessage(from, { text: "⚠️ Error ejecutando el comando." });
                 }
             }
@@ -88,7 +93,7 @@ async function startBot() {
                     try {
                         await buttonHandlers[prefix](sock, m, from, buttonId);
                     } catch (err) {
-                        console.error("❌ Error en botón:", err);
+                        console.error("❌ Error en botón:", err.message || err);
                         await sock.sendMessage(from, { text: "⚠️ Error en la acción del botón." });
                     }
                 }
@@ -96,7 +101,7 @@ async function startBot() {
         }
     });
 
-    console.log("🚀 Bot iniciado y esperando conexión...");
+    console.log("🚀 Bot iniciado y esperando conexión...\n");
 }
 
 // 🔹 Ejecutar bot

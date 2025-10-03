@@ -19,13 +19,11 @@ async function loadPlugins() {
         const { default: plugin } = await import(`./plugins/${file}`);
         if (plugin?.name && typeof plugin.run === "function") {
             plugins[plugin.name] = plugin;
-
             if (plugin.buttons) {
                 for (const [prefix, handler] of Object.entries(plugin.buttons)) {
                     buttonHandlers[prefix] = handler;
                 }
             }
-
             console.log(`✅ Plugin cargado: ${plugin.name}`);
         }
     }
@@ -38,11 +36,11 @@ async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState("auth");
     const { version } = await fetchLatestBaileysVersion();
 
+    // ⚡ No pasar logger para evitar errores
     const sock = makeWASocket({
         auth: state,
         version,
-        printQRInTerminal: false, // Desactivamos QR automático
-        logger: { level: "silent" } // Elimina logs feos de Baileys
+        printQRInTerminal: false
     });
 
     // 🔹 Mostrar QR solo si hace falta

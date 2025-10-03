@@ -1,50 +1,85 @@
-import fetch from "node-fetch";
-import fs from "fs";
+/**
+ * Plugin: !ig - Descarga contenido de Instagram (Fotos/Videos/Carrusel)
+ * Comando: !ig [enlace de Instagram]
+ * Dependencias clave: api-dylux
+ */
 
-export default {
-    name: "ig",
-    description: "Descargar reels de Instagram",
+import dyluxApi from 'api-dylux';
+
+const plugin = {
+    name: "!ig", 
 
     async run(sock, m, from, args) {
+        if (args.length === 0) {
+            await sock.sendMessage(from, { text: "👑 SAIYAJIN, necesito un enlace de Instagram para descargar. Usa: `!ig [enlace]`." }, { quoted: m });
+            return;
+        }
+
         const url = args[0];
-        if (!url) return await sock.sendMessage(from, { text: "❌ Uso: ig <url>" });
+        
+        // Validación de URL de Instagram
+        if (!/instagram\.com\/(p|reel|tv|stories)\/[\w-]+/i.test(url)) {
+            await sock.sendMessage(from, { text: "❌ El enlace no parece ser de Instagram o el formato es incorrecto." }, { quoted: m });
+            return;
+        }
 
-        await sock.sendMessage(from, {
-            text: "📷 ¿Quieres este Reel como audio o video?",
-            buttons: [
-                { buttonId: `ig-audio-${url}`, buttonText: { displayText: "🎵 Audio MP3" }, type: 1 },
-                { buttonId: `ig-video-${url}`, buttonText: { displayText: "📹 Video MP4" }, type: 1 }
-            ]
-        });
-    },
+        await sock.sendMessage(from, { text: "⏳ Analizando la publicación de Instagram... ¡Prepárate para la descarga!" }, { quoted: m });
 
-    buttons: {
-        "ig-audio-": async (sock, m, from, buttonId) => {
-            const url = buttonId.replace("ig-audio-", "");
-            const file = "./media/ig.mp3";
+        try {
+            // Usamos la función 'igdl' de api-dylux
+            const res = await dyluxApi.igdl(url);
 
-            const res = await fetch(`https://saveig.app/api?url=${encodeURIComponent(url)}`);
-            const data = await res.json();
-            const dl = data?.media[0]?.url.replace(".mp4", ".mp3");
+            if (!res || res.length === 0) {
+                await sock.sendMessage(from, { text: "❌ No se pudo encontrar o descargar el contenido. Asegúrate de que la publicación sea **pública** y el enlace esté completo." }, { quoted: m });
+                return;
+            }
 
-            const resp = await fetch(dl);
-            fs.writeFileSync(file, Buffer.from(await resp.arrayBuffer()));
+            // Aseguramos que 'mediaList' sea siempre un array, incluso si es un solo archivo
+            const mediaList = Array.isArray(res) ? res : [res];
+            
+            let successfulDownloads = 0;
 
-            await sock.sendMessage(from, { audio: { url: file }, mimetype: "audio/mp4" });
-        },
+            for (let i = 0; i < mediaList.length; i++) {
+                const media = mediaList[i];
+                const isVideo = media.type === 'video';
+                const fileUrl = media.url;
+                
+                // Determinamos el tipo de media para enviarlo correctamente
+                const mediaSendKey = isVideo ? 'video' : 'image';
+                
+                // Construimos el caption (etiqueta)
+                let captionText = (mediaList.length > 1) 
+                    ? `✅ Descarga completada. *Carrusel ${i + 1} de ${mediaList.length}*` 
+                    : '✅ Descarga completada, SAIYAJIN.';
 
-        "ig-video-": async (sock, m, from, buttonId) => {
-            const url = buttonId.replace("ig-video-", "");
-            const file = "./media/ig.mp4";
+                // El primer elemento del carrusel lleva el mensaje principal
+                if (i === 0) {
+                    captionText = (mediaList.length > 1) 
+                        ? '🔥 *Carrusel detectado.* Enviando todos los elementos...\n' + captionText
+                        : captionText;
+                }
+                
+                // Enviamos el mensaje
+                await sock.sendMessage(from, {
+                    [mediaSendKey]: { url: fileUrl },
+                    caption: captionText,
+                    mimetype: isVideo ? 'video/mp4' : 'image/jpeg',
+                }, { quoted: m });
+                
+                successfulDownloads++;
 
-            const res = await fetch(`https://saveig.app/api?url=${encodeURIComponent(url)}`);
-            const data = await res.json();
-            const dl = data?.media[0]?.url;
+                // Pequeña pausa entre elementos de un carrusel para evitar saturar
+                if (mediaList.length > 1) await new Promise(resolve => setTimeout(resolve, 800));
+            }
 
-            const resp = await fetch(dl);
-            fs.writeFileSync(file, Buffer.from(await resp.arrayBuffer()));
+            if (successfulDownloads > 0 && mediaList.length > 1) {
+                 await sock.sendMessage(from, { text: `👑 Se han enviado *${successfulDownloads} elementos* del carrusel.` }, { quoted: m });
+            }
 
-            await sock.sendMessage(from, { video: { url: file }, caption: "📹 Instagram" });
+
+        } catch (e) {
+            console.error("❌ Error en el plugin !ig:", e);
+            await sock.sendMessage(from, { text: `⚠️ Error al procesar el enlace de Instagram. Puede que la API esté temporalmente caída o el video sea privado. Detalles: ${e.message}` }, { quoted: m });
         }
     }
 };

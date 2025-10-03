@@ -1,50 +1,59 @@
-import fetch from "node-fetch";
-import fs from "fs";
+/**
+ * Plugin: !tiktok - Descarga videos de TikTok (con o sin marca de agua)
+ * Comando: !tiktok [enlace de TikTok]
+ * Dependencias clave: api-dylux
+ */
 
-export default {
-    name: "tiktok",
-    description: "Descargar videos de TikTok",
+import dyluxApi from 'api-dylux';
+
+const plugin = {
+    name: "!tiktok", 
 
     async run(sock, m, from, args) {
+        if (args.length === 0) {
+            await sock.sendMessage(from, { text: "👑 SAIYAJIN, necesito un enlace de TikTok para descargar. Usa: `!tiktok [enlace]`." }, { quoted: m });
+            return;
+        }
+
         const url = args[0];
-        if (!url) return await sock.sendMessage(from, { text: "❌ Uso: tiktok <url>" });
+        
+        // Simple validación de URL de TikTok
+        if (!/tiktok\.com/i.test(url)) {
+            await sock.sendMessage(from, { text: "❌ El enlace no parece ser de TikTok. ¡Inténtalo de nuevo!", }, { quoted: m });
+            return;
+        }
 
-        await sock.sendMessage(from, {
-            text: "📹 ¿Quieres este TikTok como audio o video?",
-            buttons: [
-                { buttonId: `tk-audio-${url}`, buttonText: { displayText: "🎵 Audio MP3" }, type: 1 },
-                { buttonId: `tk-video-${url}`, buttonText: { displayText: "📹 Video MP4" }, type: 1 }
-            ]
-        });
-    },
+        await sock.sendMessage(from, { text: "⏳ Analizando y descargando video de TikTok... por favor espera un momento." }, { quoted: m });
 
-    buttons: {
-        "tk-audio-": async (sock, m, from, buttonId) => {
-            const url = buttonId.replace("tk-audio-", "");
-            const file = "./media/tk.mp3";
+        try {
+            // Usamos la función 'tiktokdl' de api-dylux para obtener la info
+            const res = await dyluxApi.tiktokdl(url);
 
-            const res = await fetch(`https://api.tikmate.app/api/lookup?url=${encodeURIComponent(url)}`);
-            const data = await res.json();
-            const dl = data.video.url.replace(".mp4", ".mp3");
+            if (!res || !res.video.noWatermark) {
+                await sock.sendMessage(from, { text: "❌ No se pudo encontrar un enlace de descarga sin marca de agua o el video es privado/restringido. Asegúrate de que la publicación sea pública.", }, { quoted: m });
+                return;
+            }
 
-            const resp = await fetch(dl);
-            fs.writeFileSync(file, Buffer.from(await resp.arrayBuffer()));
+            const videoUrl = res.video.noWatermark;
+            const captionText = `
+✅ *TikTok Descargado*
+👑 *Autor:* ${res.author.name} (${res.author.unique_id})
+🎶 *Descripción:* ${res.desc || 'Sin descripción'}
+            `;
 
-            await sock.sendMessage(from, { audio: { url: file }, mimetype: "audio/mp4" });
-        },
+            // Enviamos el video sin marca de agua
+            await sock.sendMessage(from, {
+                video: { url: videoUrl },
+                caption: captionText,
+                mimetype: 'video/mp4',
+            }, { quoted: m });
+            
+            await sock.sendMessage(from, { text: "✅ Descarga y envío completados, SAIYAJIN. ¡Video sin marca de agua listo!" }, { quoted: m });
 
-        "tk-video-": async (sock, m, from, buttonId) => {
-            const url = buttonId.replace("tk-video-", "");
-            const file = "./media/tk.mp4";
 
-            const res = await fetch(`https://api.tikmate.app/api/lookup?url=${encodeURIComponent(url)}`);
-            const data = await res.json();
-            const dl = data.video.url;
-
-            const resp = await fetch(dl);
-            fs.writeFileSync(file, Buffer.from(await resp.arrayBuffer()));
-
-            await sock.sendMessage(from, { video: { url: file }, caption: "📹 TikTok" });
+        } catch (e) {
+            console.error("❌ Error en el plugin !tiktok:", e);
+            await sock.sendMessage(from, { text: `⚠️ Error al procesar el enlace de TikTok. Detalles: ${e.message}` }, { quoted: m });
         }
     }
 };

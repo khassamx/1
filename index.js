@@ -11,7 +11,7 @@ import fs, { readdirSync, statSync, unlinkSync, existsSync, mkdirSync, readFileS
 import yargs from 'yargs'
 import { spawn, execSync } from 'child_process'
 import lodash from 'lodash'
-// import { vegetaJadiBot } from './plugins/jadibot-serbot.js' // ⬅️ COMENTADO
+// import { vegetaJadiBot from './plugins/jadibot-serbot.js' // ⬅️ COMENTADO
 import chalk from 'chalk'
 import syntaxerror from 'syntax-error'
 import { tmpdir } from 'os'
@@ -22,7 +22,9 @@ import pino from 'pino'
 import Pino from 'pino'
 import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
-import { Low, JSONFile } from 'lowdb'
+// 🔥 CORRECCIÓN CLAVE DE LOWDB: Importar JSONFile desde 'lowdb/node'
+import { Low } from 'lowdb' 
+import { JSONFile } from 'lowdb/node' // ⬅️ IMPORTACIÓN CORREGIDA
 import NodeCache from 'node-cache'
 import readline, { createInterface } from 'readline'
 import pkg from 'google-libphonenumber'
@@ -66,7 +68,7 @@ console.log(chalk.bold.blueBright('║       Desarrollado por BrayanOFC 👑   �
 console.log(chalk.bold.blueBright('╚═══════════════════════════════════════╝\n'))
 
 protoType()
-serialize() // Se llama, pero no hace nada si no tenemos el código completo.
+serialize() 
 
 global.__filename = function filename(pathURL = import.meta.url, rmPrefix = platform !== 'win32') {
 return rmPrefix ? /file:\/\/\//.test(pathURL) ? fileURLToPath(pathURL) : pathURL : pathToFileURL(pathURL).toString();
@@ -211,10 +213,6 @@ if (global.db.data) await global.db.write()
 if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [os.tmpdir(), 'tmp', `${global.jadi}`], tmp.forEach((filename) => cp.spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete']))) // Modificado global.jadi
 }, 30 * 1000)
 }
-
-
-// (Omití las funciones LID y processLids para hacer el script más corto y menos propenso a errores, 
-// ya que dependen de funciones muy específicas que faltan.)
 
 
 async function connectionUpdate(update) {
@@ -422,7 +420,7 @@ const listaDirectorios = readdirSync(`./${global.jadi}/`); // Modificado global.
 let SBprekey = [];
 listaDirectorios.forEach(directorio => {
 if (statSync(`./${global.jadi}/${directorio}`).isDirectory()) { // Modificado global.jadi
-const DSBPreKeys = readdirSync(`./${global.jadi}/${directorio}`).filter(fileInDir => { // Modificado global.jadi
+const DSBPreKeys = readdirSync(`./${global.jadi}/${directorio}`).filter(fileInDir => {
 return fileInDir.startsWith('pre-key-')
 })
 SBprekey = [...SBprekey, ...DSBPreKeys];

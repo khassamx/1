@@ -1,3 +1,4 @@
+Handler.js
 import {generateWAMessageFromContent} from '@whiskeysockets/baileys';
 import {smsg} from './utils/simple.js';
 import {format} from 'util';

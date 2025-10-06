@@ -22,10 +22,10 @@ import pino from 'pino'
 import Pino from 'pino'
 import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
-import { makeWASocket, protoType, serialize } from './lib/simple.js'
+import { makeWASocket, protoType, serialize } from './utils/simple.js'
 import { Low, JSONFile } from 'lowdb'
-import { mongoDB, mongoDBV2 } from './lib/mongoDB.js'
-import store from './lib/store.js'
+import { mongoDB, mongoDBV2 } from './utils/mongoDB.js'
+import store from './utils/store.js'
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
 const { PhoneNumberUtil } = pkg

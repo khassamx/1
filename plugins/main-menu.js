@@ -32,7 +32,6 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 👑 Creador: ${creador}
 💻 Developer: ${developer}
 ⏱ Uptime: ${uptime}
-📊 Mensajes enviados: ${user.msgCount}
 🗨️ Chat global: ${global.db.data.global.totalMessages}
 ⭐ Nivel: ${user.level}
 💎 Premium: ${user.premium ? 'Sí' : 'No'}

@@ -2,12 +2,12 @@ import yts from 'yt-search'
 import fetch from 'node-fetch'
 
 async function apiAdonix(url) {
-  const apiURL = `https://apiadonix.kozow.com/download/ytmp4?apikey=${global.apikey}&url=${encodeURIComponent(url)}`
+  const apiURL = `https://api.sylphy.xyz/download/ytmp4?url=${encodeURIComponent(url)}&apikey=sylphy-fbb9`
   const res = await fetch(apiURL)
   const data = await res.json()
 
   if (!data.status || !data.data?.url) throw new Error('API Adonix no devolvió datos válidos')
-  return { url: data.data.url, title: data.data.title || 'Video sin título XD', fuente: 'Adonix' }
+  return { url: data.data.url, title: data.data.title || 'Video sin título XD', fuente: 'tesis' }
 }
 
 async function apiJoseDev(url) {
@@ -36,8 +36,7 @@ let handler = async (m, { conn, text, usedPrefix }) => {
   const ctxOk = (global.rcanalr || {})
 
   if (!text) {
-    return conn.reply(m.chat, `
-🌸📹 Itsuki Nakano - Descargar Video
+    return conn.reply(m.chat, `Descargar Video
 
 📝 Uso:
 • ${usedPrefix}play2 <nombre de la canción>
@@ -48,12 +47,12 @@ let handler = async (m, { conn, text, usedPrefix }) => {
 🎯 Formato:
 🎥 Video MP4 de alta calidad
 
-🍱 ¡Disfruta tus videos con Itsuki Nakano! 🌸
+🍱 ¡Disfruta tus videos con Khassam! 
     `.trim(), m, ctxWarn)
   }
 
   try {
-    await conn.reply(m.chat, '🌸🎬 Itsuki está buscando tu *video*', m, ctxOk)
+    await conn.reply(m.chat, '🎬 Khassam está buscando tu *video*', m, ctxOk)
 
     const searchResults = await yts(text)
     if (!searchResults.videos.length) throw new Error('No se encontraron resultados')
@@ -62,14 +61,14 @@ let handler = async (m, { conn, text, usedPrefix }) => {
     const { url, title, fuente } = await ytdl(video.url)
 
     const caption = `
-🌸✨ ¡Itsuki Nakano trae tu video! ✨🌸
+✨ ¡Khassam trae tu video! ✨
 💖 *Título:* ${title}
 ⏱ *Duración:* ${video.timestamp}
 👤 *Autor:* ${video.author.name}
 🔗 *URL:* ${video.url}
 
 🌐 *Fuente:* ${fuente}
-🌷 ¡Disfruta y no olvides sonreír! 🌷
+ ¡Disfruta y no olvides sonreír! 
 > 🍱 Gracias por elegirme para tus descargas 
 `.trim()
 

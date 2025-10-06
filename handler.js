@@ -1,4 +1,3 @@
-Handler.js
 import {generateWAMessageFromContent} from '@whiskeysockets/baileys';
 import {smsg} from './utils/simple.js';
 import {format} from 'util';
@@ -251,7 +250,8 @@ if (!opts['restrict'])
 if (plugin.tags && plugin.tags.includes('admin')) {
 continue
 }
-const str2Regex = str => str.replace(/[|\{}()[]^$+*?.]/g, '\$&')
+// FIX CRÍTICO APLICADO: Expresión regular para escapar caracteres de prefijo.
+const str2Regex = str => str.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&') 
 //  LÓGICA DE PREFIJOS PERSONALIZADOS AÑADIDA NO TOCAR PORFA SOLO DEYLIN.
 let _prefix = (plugin.customPrefix ? [plugin.customPrefix] : []).concat(global.db.data.settings[this.user.jid]?.prefix || global.prefix);
 let match = (_prefix instanceof RegExp ?

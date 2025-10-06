@@ -40,13 +40,13 @@ const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 console.log(chalk.bold.blueBright(`
 ╔═══════════════════════════════════════╗
-║   ⚡ Khassam ACTIVADO ⚡         ║
+║   ⚡ VEGETA-BOT-MB ACTIVADO ⚡         ║
 ║  ʕ•ᴥ•ʔ ¡Prepárate para la batalla!    ║
 ╚═══════════════════════════════════════╝
 `))
 
 console.log(chalk.bold.blueBright('╔═══════════════════════════════════════╗'))
-console.log(chalk.bold.blueBright('║       Desarrollado por Khassam 👑   ║'))
+console.log(chalk.bold.blueBright('║       Desarrollado por BrayanOFC 👑   ║'))
 console.log(chalk.bold.blueBright('╚═══════════════════════════════════════╝\n'))
 
 protoType()
@@ -492,11 +492,11 @@ unlinkSync(`./${jadi}/${directorio}/${fileInDir}`)
 }})
 }})
 if (SBprekey.length === 0) {
-console.log(chalk.bold.green(`\nꕥ ☁️No hay archivos en ${jadi} para eliminar SAIYAJIN🎃.`))
+console.log(chalk.bold.green(`\nꕥ ☁️No hay archivos en ${jadi} para eliminar SAIYAJIN🐉.`))
 } else {
-console.log(chalk.bold.cyanBright(`\n⌦ 🎃👑Archivos de la carpeta ${jadi} han sido eliminados correctamente SAIYAJIN☁️.`))
+console.log(chalk.bold.cyanBright(`\n⌦ 🐉👑Archivos de la carpeta ${jadi} han sido eliminados correctamente SAIYAJIN☁️.`))
 }} catch (err) {
-console.log(chalk.bold.red(`\n⚠︎ ☁️Error para eliminar archivos de la carpeta SAIYAJIN🎃 ${jadi}.\n` + err))
+console.log(chalk.bold.red(`\n⚠︎ ☁️Error para eliminar archivos de la carpeta SAIYAJIN🐉 ${jadi}.\n` + err))
 }}
 
 function purgeOldFiles() {
@@ -511,7 +511,7 @@ unlinkSync(filePath, err => {
 if (err) {
 console.log(chalk.bold.red(`\n⚠︎ El archivo ${file} no se logró borrar.\n` + err))
 } else {
-console.log(chalk.bold.green(`\n⌦ 👑El archivo ${file} se ha borrado correctamente SAIYAJIN🎃.`))
+console.log(chalk.bold.green(`\n⌦ 👑El archivo ${file} se ha borrado correctamente SAIYAJIN🐉.`))
 } }) }
 }) }) }) }
 function redefineConsoleMethod(methodName, filterStrings) {
@@ -526,7 +526,7 @@ originalConsoleMethod.apply(console, arguments)
 setInterval(async () => {
 if (stopped === 'close' || !conn || !conn.user) return
 await clearTmp()
-console.log(chalk.bold.cyanBright(`\n⌦ ☁️Archivos de la carpeta TMP no necesarios han sido eliminados del servidor SAIYAJIN🎃.`))}, 1000 * 60 * 4)
+console.log(chalk.bold.cyanBright(`\n⌦ ☁️Archivos de la carpeta TMP no necesarios han sido eliminados del servidor SAIYAJIN🐉.`))}, 1000 * 60 * 4)
 setInterval(async () => {
 if (stopped === 'close' || !conn || !conn.user) return
 await purgeSession()
@@ -537,12 +537,12 @@ await purgeSessionSB()}, 1000 * 60 * 10)
 setInterval(async () => {
 if (stopped === 'close' || !conn || !conn.user) return
 await purgeOldFiles()
-console.log(chalk.bold.cyanBright(`\n⌦ ☁️Archivos no necesario han sido eliminados del servidor SAIYAJIN🎃.`))}, 1000 * 60 * 10)
+console.log(chalk.bold.cyanBright(`\n⌦ ☁️Archivos no necesario han sido eliminados del servidor SAIYAJIN🐉.`))}, 1000 * 60 * 10)
 _quickTest().catch(console.error)
 async function isValidPhoneNumber(number) {
 try {
 number = number.replace(/\s+/g, '')
-if (number.startsWith('521')) {
+if (number.startsWith('+521')) {
 number = number.replace('+521', '+52');
 } else if (number.startsWith('+52') && number[4] === '1') {
 number = number.replace('+52 1', '+52');

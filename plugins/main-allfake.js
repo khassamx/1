@@ -90,7 +90,7 @@ try {
     contextInfo: {
       externalAdReply: {
         showAdAttribution: false,
-        title: "𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱 𝑼𝐩𝐝𝐚𝐭𝐞☁️",
+        title: "Khassam ☁️",
         body: global.author,
   thumbnail: fs.readFileSync("./image/catalogo2.jpg"),
   thumbnailUrl: global.pppkecil,

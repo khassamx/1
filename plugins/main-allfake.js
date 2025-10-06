@@ -92,7 +92,7 @@ try {
         showAdAttribution: false,
         title: "𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱 𝑼𝐩𝐝𝐚𝐭𝐞☁️",
         body: global.author,
-  thumbnail: fs.readFileSync("./src/catalogo2.jpg"),
+  thumbnail: fs.readFileSync("./image/catalogo2.jpg"),
   thumbnailUrl: global.pppkecil,
         sourceUrl: "https://whatsapp.com/channel/0029Vb9P9ZU0gcfNusD1jG3d",
         mediaType: 1,
@@ -114,7 +114,7 @@ try {
         mediaUrl: sgc,
         description: "𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱 𝑼𝐩𝐝𝐚𝐭𝐞☁️",
         previewType: "PHOTO",
-  thumbnail: fs.readFileSync("./src/catalogo.jpg"),
+  thumbnail: fs.readFileSync("./image/catalogo.jpg"),
         sourceUrl: "https://whatsapp.com/channel/0029VbBQ5sf4NVioq39Efn0v",
       }
     }
@@ -136,7 +136,7 @@ try {
         sourceType: "PDF",
         previewType: "PDF",
         sourceUrl: sgc,
-        thumbnail: fs.readFileSync("./src/catalogo.jpg"),
+        thumbnail: fs.readFileSync("./image/catalogo.jpg"),
         thumbnailUrl: global.logo,
         title: "🔥 " + Sapa() + Pagi()
       }

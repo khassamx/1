@@ -1,103 +1,87 @@
-import fetch from 'node-fetch'
-import yts from 'yt-search'
+import fetch from "node-fetch"
 
-let handler = async (m, { conn, text, usedPrefix }) => {
-const ctxErr = (global.rcanalx || {})
-const ctxWarn = (global.rcanalw || {})
-const ctxOk = (global.rcanalr || {})
+let handler = async (m, { conn, args }) => {
+  if (!args[0]) return m.reply(`🌸 Ingresa un link de YouTube\n\n📌 Ejemplo: .ytmp3 https://youtu.be/xxxxx`)
 
-if (!text) {
-return conn.reply(m.chat, `
-🍙📚 Itsuki Nakano - Descargar Multimedia 🎵🎥✨
+  const urlVideo = args[0].trim()
 
-📝 Forma de uso:
-• ${usedPrefix}play <nombre de la canción>
+  try {
+    await conn.sendMessage(m.chat, { react: { text: "⏳", key: m.key } })
 
-💡 Ejemplos:
-• ${usedPrefix}play unravel Tokyo ghoul
-• ${usedPrefix}play crossing field
+    let res, data, downloadUrl
 
-🎯 Formato disponible:
-🎵 Audio MP3 (alta calidad)
+    // 🌸 Intento 1: API Zenkey
+    try {
+      res = await fetch(`https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(urlVideo)}`)
+      data = await res.json()
+      downloadUrl =
+        data.result?.download_url ||
+        data.result?.url ||
+        data.result?.audio ||
+        data.url ||
+        null
 
-🍱 ¡Encuentra y descarga tu música favorita! 🎶
-`.trim(), m, ctxWarn)
+      if (downloadUrl) console.log("✅ Usando API principal (Zenkey)")
+    } catch (e) {
+      console.warn("⚠️ Error con API principal:", e)
+    }
+
+    // 🌸 Intento 2: API de respaldo (Adonix)
+    if (!downloadUrl) {
+      try {
+        res = await fetch(`https://apiadonix.kozow.com/download/ytmp3?apikey=${global.apikey || 'adonixfree'}&url=${encodeURIComponent(urlVideo)}`)
+        data = await res.json()
+        downloadUrl =
+          data.result?.download_url ||
+          data.result?.audio ||
+          data.url ||
+          data.link ||
+          null
+        if (downloadUrl) console.log("✅ Usando API de respaldo (Adonix)")
+      } catch (e) {
+        console.warn("⚠️ Error con API de respaldo:", e)
+      }
+    }
+
+    // 🌸 Intento 3: API alterna (Ytdl by Violetics)
+    if (!downloadUrl) {
+      try {
+        res = await fetch(`https://violetics.pw/api/downloader/ytmp3?apikey=beta&url=${encodeURIComponent(urlVideo)}`)
+        data = await res.json()
+        downloadUrl = data.result?.link || data.result?.audio || null
+        if (downloadUrl) console.log("✅ Usando API alternativa (Violetics)")
+      } catch (e) {
+        console.warn("⚠️ Error con API alternativa:", e)
+      }
+    }
+
+    // ❌ Ninguna funcionó
+    if (!downloadUrl) return m.reply("🥲 No se pudo enviar el audio desde ninguna API. Intenta con otro enlace o más tarde.")
+
+    // ✅ Descargar y enviar el audio
+    const fileResp = await fetch(downloadUrl)
+    const buffer = Buffer.from(await fileResp.arrayBuffer())
+
+    await conn.sendMessage(
+      m.chat,
+      {
+        audio: buffer,
+        mimetype: "audio/mpeg",
+        fileName: `ytmp3_${Date.now()}.mp3`
+      },
+      { quoted: m }
+    )
+
+    await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
+
+  } catch (e) {
+    console.error("❌ Error en ytmp3 handler:", e)
+    m.reply("❌ Error al descargar el audio. Intenta con otro link.")
+  }
 }
 
-try {
-await conn.reply(m.chat, '🎵 Buscando audio...', m, ctxOk)
-
-const search = await yts(text)  
-if (!search.videos.length) throw new Error('No encontré resultados para tu búsqueda.')  
-
-const video = search.videos[0]  
-const { title, url, thumbnail } = video  
-
-let thumbBuffer = null  
-if (thumbnail) {  
-  try {  
-    const resp = await fetch(thumbnail)  
-    thumbBuffer = Buffer.from(await resp.arrayBuffer())  
-  } catch (err) {  
-    console.log('No se pudo obtener la miniatura:', err.message)  
-  }  
-}  
-
-const fuentes = [  
-  { api: 'Adonix', endpoint: `https://apiadonix.kozow.com/download/ytmp3?apikey=${global.apikey}&url=${encodeURIComponent(url)}`, extractor: res => res?.data?.url },  
-  { api: 'ZenzzXD', endpoint: `https://api.zenzxz.my.id/downloader/ytmp3?url=${encodeURIComponent(url)}`, extractor: res => res?.download_url },  
-  { api: 'ZenzzXD v2', endpoint: `https://api.zenzxz.my.id/downloader/ytmp3v2?url=${encodeURIComponent(url)}`, extractor: res => res?.download_url },  
-  { api: 'Vreden', endpoint: `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(url)}`, extractor: res => res?.result?.download?.url },  
-  { api: 'Delirius', endpoint: `https://api.delirius.my.id/download/ymp3?url=${encodeURIComponent(url)}`, extractor: res => res?.data?.download?.url },  
-  { api: 'StarVoid', endpoint: `https://api.starvoidclub.xyz/download/youtube?url=${encodeURIComponent(url)}`, extractor: res => res?.audio }  
-]  
-
-let audioUrl, apiUsada, exito = false  
-
-for (let fuente of fuentes) {  
-  try {  
-    const response = await fetch(fuente.endpoint)  
-    if (!response.ok) continue  
-    const data = await response.json()  
-    const link = fuente.extractor(data)  
-    if (link && typeof link === 'string' && link.startsWith('http')) {  
-      audioUrl = link  
-      apiUsada = fuente.api  
-      exito = true  
-      break  
-    }  
-  } catch (err) {  
-    console.log(`⚠️ Error con ${fuente.api}:`, err.message)  
-  }  
-}  
-
-if (!exito) {  
-  await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } })  
-  return conn.reply(m.chat, '🥲 No se pudo enviar el audio desde ninguna API.', m, ctxErr)  
-}  
-
-await conn.sendMessage(  
-  m.chat,  
-  {  
-    audio: { url: audioUrl },  
-    mimetype: 'audio/mpeg',  
-    ptt: false,  
-    jpegThumbnail: thumbBuffer,  
-    caption: `🎼 ${title}\n🌐 API usada: ${apiUsada}`  
-  },  
-  { quoted: m }  
-)  
-
-await conn.reply(m.chat, `✅ Descarga completa 🍙\n🎵 ${title}`, m, ctxOk)
-
-} catch (e) {
-console.error('❌ Error en play:', e)
-await conn.reply(m.chat, ❌ Error: ${e.message}, m, ctxErr)
-}
-}
-
-handler.help = ['play <nombre de la canción>']
-handler.tags = ['downloader']
-handler.command = ['play']
+handler.command = ['ytmp3']
+handler.help = ["ytmp3 <link>"]
+handler.tags = ["descargas"]
 
 export default handler

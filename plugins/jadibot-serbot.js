@@ -8,7 +8,7 @@ import pino from 'pino'
 import chalk from 'chalk'
 import * as ws from 'ws'
 import { fileURLToPath } from 'url'
-import { makeWASocket } from '../lib/simple.js'
+import { makeWASocket } from '../utils/simple.js'
 
 const { exec } = await import('child_process')
 const { CONNECTING } = ws

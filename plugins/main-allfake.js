@@ -115,7 +115,7 @@ try {
         description: "Khassam☁️",
         previewType: "PHOTO",
   thumbnail: fs.readFileSync("./image/catalogo.jpg"),
-        sourceUrl: Khassam ☁️",
+        sourceUrl: "Khassam ☁️",
         sourceType: "PDF",
         previewType: "PDF",
         sourceUrl: sgc,

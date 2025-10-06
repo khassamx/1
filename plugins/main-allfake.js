@@ -94,7 +94,7 @@ try {
         body: global.author,
   thumbnail: fs.readFileSync("./image/catalogo2.jpg"),
   thumbnailUrl: global.pppkecil,
-        sourceUrl: "https://whatsapp.com/channel/0029Vb9P9ZU0gcfNusD1jG3d",
+        sourceUrl: "https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V",
         mediaType: 1,
         renderLargerThumbnail: false
       }
@@ -112,27 +112,10 @@ try {
         title: "🔥 " + Sapa() + Pagi(),
         body: author,
         mediaUrl: sgc,
-        description: "𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱 𝑼𝐩𝐝𝐚𝐭𝐞☁️",
+        description: "Khassam☁️",
         previewType: "PHOTO",
   thumbnail: fs.readFileSync("./image/catalogo.jpg"),
-        sourceUrl: "https://whatsapp.com/channel/0029VbBQ5sf4NVioq39Efn0v",
-      }
-    }
-  }
-
-  global.adReply = {
-    fileLength: SizeDoc(),
-    seconds: SizeDoc(),
-    contextInfo: {
-      forwardingScore: SizeDoc(),
-      externalAdReply: {
-        body: author,
-        containsAutoReply: true,
-        mediaType: 1,
-        mediaUrl: sgc,
-        renderLargerThumbnail: false,
-        showAdAttribution: false,
-        sourceId: "𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱 𝑼𝐩𝐝𝐚𝐭𝐞☁️",
+        sourceUrl: Khassam ☁️",
         sourceType: "PDF",
         previewType: "PDF",
         sourceUrl: sgc,
@@ -299,7 +282,7 @@ global.rcanalr = {
         newsletterName: namechannel,
       },
       externalAdReply: {
-        title: '𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱 𝑼𝐩𝐝𝐚𝐭𝐞☁️',
+        title: 'Khassam☁️',
         body: '',
         mediaUrl: null,
         description: null,
@@ -320,7 +303,7 @@ global.rcanalr = {
         newsletterName: namechannel,
       },
       externalAdReply: {
-        title: '𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱 𝑼𝐩𝐝𝐚𝐭𝐞☁️',
+        title: 'Kassam☁️',
         body: '',
         mediaUrl: null,
         description: null,

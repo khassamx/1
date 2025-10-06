@@ -14,10 +14,16 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
     if (!global.db) global.db = {}
     if (!global.db.data) global.db.data = {}
     if (!global.db.data.users) global.db.data.users = {}
+    if (!global.db.data.global) global.db.data.global = { totalMessages: 0 }
 
     let userId = m.mentionedJid?.[0] || m.sender
     let user = global.db.data.users[userId] || { exp: 0, level: 1, premium: false, msgCount: 0 }
     let uptime = clockString(process.uptime() * 1000)
+
+    // Incrementar contador global y por usuario
+    global.db.data.global.totalMessages += 1
+    user.msgCount += 1
+    global.db.data.users[userId] = user
 
     let menuText = `
 🦉 ${botname} - v${version} 🦉
@@ -27,6 +33,7 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 💻 Developer: ${developer}
 ⏱ Uptime: ${uptime}
 📊 Mensajes enviados: ${user.msgCount}
+🗨️ Chat global: ${global.db.data.global.totalMessages}
 ⭐ Nivel: ${user.level}
 💎 Premium: ${user.premium ? 'Sí' : 'No'}
 
@@ -38,6 +45,7 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 .play 
 .tiktok        
 .ig           
+
 🦉 CREADOR
 .owner              
 
@@ -45,10 +53,6 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 .qr                 
 .code               
 `
-
-    // Incrementar contador de mensajes
-    user.msgCount += 1
-    global.db.data.users[userId] = user
 
     // Enviar menú
     await conn.sendMessage(m.chat, { text: menuText, contextInfo: { mentionedJid: [userId] } })

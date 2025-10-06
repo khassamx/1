@@ -1,4 +1,4 @@
-// 🦉 Menú DELUXE TITAN de MALLY BOT
+// 🦉 Menú DELUXE TITAN con contador global de MALLY BOT
 // Creado por Khassam | Developer: Brayan OFC
 
 import fetch from 'node-fetch'
@@ -14,10 +14,16 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
     if (!global.db) global.db = {}
     if (!global.db.data) global.db.data = {}
     if (!global.db.data.users) global.db.data.users = {}
+    if (!global.db.data.global) global.db.data.global = { totalMessages: 0 }
 
     let userId = m.mentionedJid?.[0] || m.sender
     let user = global.db.data.users[userId] || { exp: 0, level: 1, premium: false, msgCount: 0 }
     let uptime = clockString(process.uptime() * 1000)
+
+    // Incrementar contadores
+    user.msgCount += 1
+    global.db.data.global.totalMessages += 1
+    global.db.data.users[userId] = user
 
     let menuText = `
 🦉 ${botname} - v${version} 🦉
@@ -26,7 +32,8 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 👑 Creador: ${creador}
 💻 Developer: ${developer}
 ⏱ Uptime: ${uptime}
-📊 Mensajes enviados: ${user.msgCount}
+📊 Tus mensajes: ${user.msgCount}
+📊 Mensajes globales: ${global.db.data.global.totalMessages}
 ⭐ Nivel: ${user.level}
 💎 Premium: ${user.premium ? 'Sí' : 'No'}
 
@@ -46,10 +53,6 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 .qr                 → Generar código QR
 .code               → Enlazar tu WhatsApp
 `
-
-    // Incrementar contador de mensajes
-    user.msgCount += 1
-    global.db.data.users[userId] = user
 
     // Enviar menú
     await conn.sendMessage(m.chat, { text: menuText, contextInfo: { mentionedJid: [userId] } })

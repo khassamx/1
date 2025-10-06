@@ -1,5 +1,5 @@
 import path from 'path'  
-import { toAudio } from './convertir.js'
+import { toAudio } from './converter.js'
 import chalk from 'chalk'
 import fetch from 'node-fetch'
 import PhoneNumber from 'awesome-phonenumber'

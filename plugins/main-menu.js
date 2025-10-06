@@ -3,7 +3,7 @@
 
 import fetch from 'node-fetch'
 
-const botname = '🦉 MALLY BOT TITAN 🦉'
+const botname = '🦉 MALLY🦉'
 const creador = 'KHASSAM'
 const developer = 'BRAYAN OFC'
 const version = '1.0.0'

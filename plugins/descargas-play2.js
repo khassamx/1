@@ -101,5 +101,3 @@ handler.command = ['play2']
 
 export default handler
 
-Hazme una mejor estructura de Mally
-

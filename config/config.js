@@ -66,9 +66,9 @@ global.catalogo = 'https://files.catbox.moe/j0z1kz.jpg'
 
 //*─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒──ׄ─ׅ─ׄ─
 
-global.gp1 = 'https://chat.whatsapp.com/HaKf6ezcwdbGzmH782eBal?mode=r_c'
-global.comunidad1 = 'https://chat.whatsapp.com/I0dMp2fEle7L6RaWBmwlAa'
-global.channel = 'https://whatsapp.com/channel/0029Vb64nWqLo4hb8cuxe23n'
+global.gp1 = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V'
+global.comunidad1 = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V'
+global.channel = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V'
 global.channel2 = 'https://whatsapp.com/channel/0029VbAfPu9BqbrEMFWXKE0d'
 global.md = 'https://githun.com/BrayanOFC/VEGETA-BOT-MB.git'
 global.correo = 'lourdesagueda93@gmail.com'

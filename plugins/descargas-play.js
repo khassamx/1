@@ -1,103 +1,126 @@
-import fetch from 'node-fetch'
 import yts from 'yt-search'
+import fetch from 'node-fetch'
 
-let handler = async (m, { conn, text, usedPrefix }) => {
-  const ctxErr = (global.rcanalx || {})
-  const ctxWarn = (global.rcanalw || {})
-  const ctxOk = (global.rcanalr || {})
+/* ================================
+    🔹 API PRINCIPAL (Adonix)
+================================ */
+async function apiAdonixMP3(url) {
+  const api = `https://api.sylphy.xyz/download/ytmp3?url=${encodeURIComponent(url)}&apikey=sylphy-fbb9`
+  const res = await fetch(api)
+  const data = await res.json()
+
+  if (!data.status || !data.data?.url) throw new Error('La API Adonix no devolvió una URL válida')
+
+  return {
+    url: data.data.url,
+    title: data.data.title || 'Audio sin título',
+    fuente: 'Adonix'
+  }
+}
+
+/* ================================
+    🔹 API DE RESPALDO (Ryzendesu)
+================================ */
+async function apiBackupMP3(url) {
+  const api = `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${encodeURIComponent(url)}`
+  const res = await fetch(api)
+  const data = await res.json()
+
+  if (!data.status || !data.result?.url) throw new Error('La API Backup no devolvió datos válidos')
+
+  return {
+    url: data.result.url,
+    title: data.result.title || 'Audio sin título',
+    fuente: 'Ryzendesu'
+  }
+}
+
+/* ================================
+    🔹 FUNCIÓN PRINCIPAL DE DESCARGA
+================================ */
+async function getAudio(url) {
+  try {
+    console.log('🎧 Probando API Adonix...')
+    return await apiAdonixMP3(url)
+  } catch (err1) {
+    console.warn('⚠️ Error con Adonix:', err1.message)
+    console.log('🔁 Cambiando a API Backup...')
+    return await apiBackupMP3(url)
+  }
+}
+
+/* ================================
+    🔹 HANDLER DEL COMANDO PLAY
+================================ */
+const handler = async (m, { conn, text, usedPrefix }) => {
+  const ctxErr = global.rcanalx || {}
+  const ctxWarn = global.rcanalw || {}
+  const ctxOk = global.rcanalr || {}
 
   if (!text) {
     return conn.reply(m.chat, `
-🍙📚 Itsuki Nakano - Descargar Multimedia 🎵🎥✨
+🎶 *Descargar Música de YouTube (MP3)*
 
-📝 Forma de uso:
-• ${usedPrefix}play <nombre de la canción>
+📝 *Uso:*
+${usedPrefix}play <nombre de la canción>
 
-💡 Ejemplos:
-• ${usedPrefix}play unravel Tokyo ghoul
-• ${usedPrefix}play crossing field
+💡 *Ejemplo:*
+${usedPrefix}play enemy imagine dragons
 
-🎯 Formato disponible:
-🎵 Audio MP3 (alta calidad)
-
-🍱 ¡Encuentra y descarga tu música favorita! 🎶
+🎧 *Formato:* MP3 (Alta calidad)
+✨ *Bot:* Mally-AI 🎀
     `.trim(), m, ctxWarn)
   }
 
   try {
-    await conn.reply(m.chat, '🎵 Buscando *audio*...', m, ctxOk)
+    await conn.reply(m.chat, '🔍 *Mally está buscando tu canción...* 🎼', m, ctxOk)
 
+    // Buscar en YouTube
     const search = await yts(text)
-    if (!search.videos.length) throw new Error('No encontré resultados para tu búsqueda.')
+    if (!search.videos.length) throw new Error('No se encontraron resultados en YouTube.')
 
-    const video = search.videos[0]
-    const { title, url, thumbnail } = video
+    const song = search.videos[0]
+    const { url, title, fuente } = await getAudio(song.url)
 
-    let thumbBuffer = null
-    if (thumbnail) {
-      try {
-        const resp = await fetch(thumbnail)
-        thumbBuffer = Buffer.from(await resp.arrayBuffer())
-      } catch (err) {
-        console.log('No se pudo obtener la miniatura:', err.message)
-      }
-    }
+    const caption = `
+🎀 *Mally Bot - Canción Encontrada* 🎀
 
-    const fuentes = [
-      { api: 'Adonix', endpoint: `https://apiadonix.kozow.com/download/ytmp3?apikey=${global.apikey}&url=${encodeURIComponent(url)}`, extractor: res => res?.data?.url },
-      { api: 'ZenzzXD', endpoint: `https://api.zenzxz.my.id/downloader/ytmp3?url=${encodeURIComponent(url)}`, extractor: res => res?.download_url },
-      { api: 'ZenzzXD v2', endpoint: `https://api.zenzxz.my.id/downloader/ytmp3v2?url=${encodeURIComponent(url)}`, extractor: res => res?.download_url },
-      { api: 'Vreden', endpoint: `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(url)}`, extractor: res => res?.result?.download?.url },
-      { api: 'Delirius', endpoint: `https://api.delirius.my.id/download/ymp3?url=${encodeURIComponent(url)}`, extractor: res => res?.data?.download?.url },
-      { api: 'StarVoid', endpoint: `https://api.starvoidclub.xyz/download/youtube?url=${encodeURIComponent(url)}`, extractor: res => res?.audio }
-    ]
+🎵 *Título:* ${title}
+⏱️ *Duración:* ${song.timestamp}
+👤 *Autor:* ${song.author.name}
+🔗 *Enlace:* ${song.url}
 
-    let audioUrl, apiUsada, exito = false
+🌐 *Fuente:* ${fuente}
+💬 *Disfruta tu música con Mally 💫*
+`.trim()
 
-    for (let fuente of fuentes) {
-      try {
-        const response = await fetch(fuente.endpoint)
-        if (!response.ok) continue
-        const data = await response.json()
-        const link = fuente.extractor(data)
-        if (link && typeof link === 'string' && link.startsWith('http')) {
-          audioUrl = link
-          apiUsada = fuente.api
-          exito = true
-          break
-        }
-      } catch (err) {
-        console.log(`⚠️ Error con ${fuente.api}:`, err.message)
-      }
-    }
-
-    if (!exito) {
-      await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } })
-      return conn.reply(m.chat, '🥲 No se pudo enviar el audio desde ninguna API.', m, ctxErr)
-    }
+    // Descargar audio
+    const buffer = await fetch(url).then(res => res.buffer())
 
     await conn.sendMessage(
       m.chat,
       {
-        audio: { url: audioUrl },
+        audio: buffer,
         mimetype: 'audio/mpeg',
-        ptt: false,
-        jpegThumbnail: thumbBuffer,
-        caption: `🎼 ${title}\n🌐 API usada: ${apiUsada}`
+        fileName: `${title}.mp3`,
+        caption,
+        ptt: false
       },
       { quoted: m }
     )
 
-    await conn.reply(m.chat, `✅ Descarga completa 🍙\n🎵 ${title}`, m, ctxOk)
-
   } catch (e) {
     console.error('❌ Error en play:', e)
-    await conn.reply(m.chat, `❌ Error: ${e.message}`, m, ctxErr)
+    await conn.reply(m.chat, `❌ *Error:* ${e.message}`, m, ctxErr)
   }
 }
 
-handler.help = ['play <nombre de la canción>']
-handler.tags = ['downloader']
+/* ================================
+    🔹 METADATOS DEL COMANDO
+================================ */
+handler.help = ['play <nombre>']
+handler.tags = ['descargas']
 handler.command = ['play']
+handler.register = true
 
 export default handler

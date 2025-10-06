@@ -1,58 +1,56 @@
-// ⌬ Menú MALLY BOT con letra estilizada segura
+// 🦉 Menú DELUXE TITAN de MALLY BOT
 // Creado por Khassam | Developer: Brayan OFC
 
 import fetch from 'node-fetch'
 
-const botname = '⌬ MALLY Ϟ BOT ⌬'
+const botname = '🦉 MALLY BOT TITAN 🦉'
 const creador = 'KHASSAM'
 const developer = 'BRAYAN OFC'
-
-// Función solo para títulos y secciones
-function fancyText(text) {
-  const map = {
-    'a':'ᴀ','b':'ʙ','c':'ᴄ','d':'ᴅ','e':'ᴇ','f':'ꜰ','g':'ɢ','h':'ʜ','i':'ɪ','j':'ᴊ',
-    'k':'ᴋ','l':'ʟ','m':'ᴍ','n':'ɴ','o':'ᴏ','p':'ᴘ','q':'ǫ','r':'ʀ','s':'ꜱ','t':'ᴛ',
-    'u':'ᴜ','v':'ᴠ','w':'ᴡ','x':'x','y':'ʏ','z':'ᴢ','A':'A','B':'B','C':'C','D':'D','E':'E',
-    'F':'F','G':'G','H':'H','I':'I','J':'J','K':'K','L':'L','M':'M','N':'N','O':'O','P':'P',
-    'Q':'Q','R':'R','S':'S','T':'T','U':'U','V':'V','W':'W','X':'X','Y':'Y','Z':'Z'
-  }
-  return text.split('').map(c => map[c] || c).join('')
-}
+const version = '1.0.0'
 
 let handler = async (m, { conn, usedPrefix: _p }) => {
   try {
+    // Inicializar base de datos si no existe
     if (!global.db) global.db = {}
     if (!global.db.data) global.db.data = {}
-    if (!global.db.data.global) global.db.data.global = { totalMessages: 0 }
+    if (!global.db.data.users) global.db.data.users = {}
 
-    global.db.data.global.totalMessages += 1
-    let totalGlobal = global.db.data.global.totalMessages
     let userId = m.mentionedJid?.[0] || m.sender
+    let user = global.db.data.users[userId] || { exp: 0, level: 1, premium: false, msgCount: 0 }
+    let uptime = clockString(process.uptime() * 1000)
 
     let menuText = `
-${botname}
+🦉 ${botname} - v${version} 🦉
 
-⌬ ${fancyText('Creador')}: ${creador}
-⌬ ${fancyText('Developer')}: ${developer}
-⌬ ${fancyText('Mensajes globales')}: ${totalGlobal}
+⚔️ Saludos @${userId.split('@')[0]}
+👑 Creador: ${creador}
+💻 Developer: ${developer}
+⏱ Uptime: ${uptime}
+📊 Mensajes enviados: ${user.msgCount}
+⭐ Nivel: ${user.level}
+💎 Premium: ${user.premium ? 'Sí' : 'No'}
 
-⌬ ${fancyText('GRUPOS')}
-⌬ .kick
-⌬ .antilink
+🦉 GRUPOS
+.kick @user       
+.antilink on/off  
 
-⌬ ${fancyText('DESCARGAS')}
-⌬ .play
-⌬ .tiktok
-⌬ .ig
+🦉 DESCARGAS
+.play 
+.tiktok        
+.ig           
+🦉 CREADOR
+.owner              
 
-⌬ ${fancyText('CREADOR')}
-⌬ .owner
-
-⌬ ${fancyText('SUBBOT')}
-⌬ .qr
-⌬ .code
+🦉 SUBBOT
+.qr                 
+.code               
 `
 
+    // Incrementar contador de mensajes
+    user.msgCount += 1
+    global.db.data.users[userId] = user
+
+    // Enviar menú
     await conn.sendMessage(m.chat, { text: menuText, contextInfo: { mentionedJid: [userId] } })
 
   } catch (e) {
@@ -60,8 +58,16 @@ ${botname}
   }
 }
 
-// Comandos que activan el menú
 handler.help = ['menu']
 handler.tags = ['main']
-handler.command = ['menu', 'mallymenu']
+handler.command = ['menu', 'help', 'mallymenu', 'titanmenu']
 export default handler
+
+// Función para convertir uptime en texto
+function clockString(ms) {
+  let d = Math.floor(ms / 86400000)
+  let h = Math.floor(ms / 3600000) % 24
+  let m = Math.floor(ms / 60000) % 60
+  let s = Math.floor(ms / 1000) % 60
+  return `${d ? d + 'd ' : ''}${h ? h + 'h ' : ''}${m ? m + 'm ' : ''}${s}s`
+}

@@ -1,9 +1,9 @@
-//Creador del menu: BrayanOFC
+// Creador del menú: BrayanOFC
 import fetch from 'node-fetch'
 
 const botname = global.botname || '🌸 𝐈𝐓𝐒𝐔𝐊𝐈 𝐍𝐀𝐊𝐀𝐍𝐎-𝐀𝐈 🌸'
 const creador = '𝗟𝗲𝗼  𝘅𝘇𝘅𝘀𝘆 ⚡'
-const version = '𝗕𝗲𝘁𝗮' 
+const version = '𝗕𝗲𝘁𝗮'
 
 let tags = {
   'serbot': '❤️‍🩹 𝗦𝗨𝗕-𝗕𝗢𝗧𝗦',
@@ -20,7 +20,7 @@ let tags = {
   'downloader': '👒 𝗗𝗘𝗦𝗖𝗔𝗥𝗚𝗔𝗦',
   'sticker': '🎀 𝗦𝗧𝗜𝗖𝗞𝗘𝗥',
   'audio': '🫧 𝗔𝗨𝗗𝗜𝗢',
-  'search': '🪞 𝗕𝗨𝗦𝗤𝗨𝗘𝗃𝗔',
+  'search': '🪞 𝗕𝗨𝗦𝗤𝗨𝗘𝗝𝗔',
   'tools': '🧰 𝗛𝗘𝗥𝗔𝗠𝗜𝗘𝗡𝗧𝗔𝗦',
   'fun': '💃 𝗗𝗜𝗩𝗘𝗥𝗦𝗜𝗢𝗡',
   'anime': '🪭 𝗔𝗡𝗜𝗠𝗘',
@@ -48,22 +48,10 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
     }))
 
     let date = new Date()
-    let time = date.toLocaleTimeString('es-MX', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit', 
-      hour12: false 
-    })
-
     let uptime = clockString(process.uptime() * 1000)
 
-    // Detectar automáticamente si es bot oficial o sub-bot
     const botJid = conn.user.jid
-        const officialBotNumber = '18097769423@s.whatsapp.net' // REEMPLAZA CON EL NÚMERO DEL BOT OFICIAL
-
-let name = conn.getName(m.sender) || 'Usuario'
-let taguser = '@' + m.sender.split('@')[0]
-    
+    const officialBotNumber = '18097769423@s.whatsapp.net' // Reemplaza con el número real del bot oficial
     const isOfficialBot = botJid === officialBotNumber
     const botType = isOfficialBot ? '🌷 𝗕𝗼𝘁 𝗢𝗳𝗶𝗰𝗶𝗮𝗹: 𝗜𝘁𝘀𝘂𝗸𝗶 𝗡𝗮𝗸𝗮𝗻𝗼 𝗢𝗳𝗶𝗰𝗶𝗮𝗹 🌟' : '⭐ 𝗦𝘂𝗯-𝗕𝗼𝘁: 𝗡𝗼 𝗕𝗼𝘁 𝗢𝗳𝗰𝗶𝗮𝗹 🌟'
 
@@ -95,23 +83,18 @@ ${comandos.map(menu => menu.help.map(cmd =>
 
     let vidBuffer = await (await fetch('https://files.catbox.moe/nl3zrv.mp4')).buffer()
     await conn.sendMessage(
-  m.chat,
-  {
-    video: vidBuffer,
-    gifPlayback: true,
-    caption: menuText,
-    contextInfo: {
-      mentionedJid: [userId],
-      isForwarded: true,
-      forwardedNewsletterMessageInfo: {
-        newsletterJid: idchannel, 
-        serverMessageId: 100, 
-        newsletterName: namechannel 
-      }
-    }
-  },
-  { quoted: m }
-)
+      m.chat,
+      {
+        video: vidBuffer,
+        gifPlayback: true,
+        caption: menuText,
+        contextInfo: {
+          mentionedJid: [userId],
+          isForwarded: true
+        }
+      },
+      { quoted: m }
+    )
 
   } catch (e) {
     await conn.sendMessage(m.chat, { text: `❌ Error en el menú:\n${e}` }, { quoted: m })
@@ -124,7 +107,7 @@ handler.command = ['menu', 'menunakano', 'help', 'menuitsuki']
 export default handler
 
 function clockString(ms) {
-  let d = Math.floor(ms / 86400000) 
+  let d = Math.floor(ms / 86400000)
   let h = Math.floor(ms / 3600000) % 24
   let m = Math.floor(ms / 60000) % 60
   let s = Math.floor(ms / 1000) % 60

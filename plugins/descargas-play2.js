@@ -1,125 +1,77 @@
 import yts from 'yt-search'
 import fetch from 'node-fetch'
 
-/* ================================
-    🔹 DESCARGA CON API PRINCIPAL
-================================ */
-async function apiAdonix(url) {
-  const api = `https://api.sylphy.xyz/download/ytmp4?url=${encodeURIComponent(url)}&apikey=sylphy-fbb9`
-  const res = await fetch(api)
-  const data = await res.json()
+const API_KEY = 'sylphy-fbb9'
 
-  if (!data.status || !data.data?.url) throw new Error('La API Adonix no devolvió una URL válida')
-
-  return {
-    url: data.data.url,
-    title: data.data.title || 'Video sin título',
-    fuente: 'Adonix'
-  }
-}
-
-/* ================================
-    🔹 API DE RESPALDO
-================================ */
-async function apiBackup(url) {
-  const api = `https://api.ryzendesu.vip/api/downloader/ytmp4?url=${encodeURIComponent(url)}`
-  const res = await fetch(api)
-  const data = await res.json()
-
-  if (!data.status || !data.result?.url) throw new Error('La API Backup no devolvió datos válidos')
-
-  return {
-    url: data.result.url,
-    title: data.result.title || 'Video sin título',
-    fuente: 'Ryzendesu'
-  }
-}
-
-/* ================================
-    🔹 FUNCIÓN PRINCIPAL DE DESCARGA
-================================ */
 async function getVideo(url) {
-  try {
-    console.log('🎬 Probando API Adonix...')
-    return await apiAdonix(url)
-  } catch (err1) {
-    console.warn('⚠️ Error con Adonix:', err1.message)
-    console.log('🔁 Cambiando a API Backup...')
-    return await apiBackup(url)
+  const endpoints = [
+    `https://api.sylphy.xyz/download/ytmp4?url=${encodeURIComponent(url)}&apikey=${API_KEY}`,
+    `https://api.akuari.my.id/downloader/youtube?link=${encodeURIComponent(url)}`,
+    `https://api.lolhuman.xyz/api/ytvideo2?apikey=genbotkey&url=${encodeURIComponent(url)}`
+  ]
+
+  for (const api of endpoints) {
+    try {
+      const res = await fetch(api)
+      const data = await res.json()
+      let link = data?.data?.url || data?.result?.link || data?.result?.url || data?.url
+      if (link) {
+        return { url: link, title: data?.data?.title || data?.title || 'Video sin título' }
+      }
+    } catch { continue }
   }
+  throw new Error('Ninguna API devolvió resultado válido')
 }
 
-/* ================================
-    🔹 HANDLER DE COMANDO
-================================ */
-const handler = async (m, { conn, text, usedPrefix }) => {
-  const ctxErr = global.rcanalx || {}
-  const ctxWarn = global.rcanalw || {}
-  const ctxOk = global.rcanalr || {}
-
+let handler = async (m, { conn, text, usedPrefix }) => {
   if (!text) {
     return conn.reply(m.chat, `
-🎬 *Descargar Video de YouTube (MP4)*
+🎵 *Descargar desde YouTube*
 
-📝 *Uso:*
-${usedPrefix}play2 <nombre del video>
+> Usa el comando:
+\`${usedPrefix}play2 <nombre del video>\`
 
-💡 *Ejemplo:*
-${usedPrefix}play2 spy x family opening
-
-📽️ *Formato:* MP4 (Alta calidad)
-✨ *Bot:* Mally-AI 🎀
-    `.trim(), m, ctxWarn)
+Ejemplo:
+> ${usedPrefix}play2 faded
+`.trim(), m)
   }
 
   try {
-    await conn.reply(m.chat, '🔍 *Mally está buscando tu video...* 🎧', m, ctxOk)
+    await conn.reply(m.chat, '🔍 *Buscando tu video...*', m)
 
-    // Buscar en YouTube
     const search = await yts(text)
-    if (!search.videos.length) throw new Error('No se encontraron resultados en YouTube.')
+    if (!search.videos.length) throw 'No se encontraron resultados'
 
     const video = search.videos[0]
-    const { url, title, fuente } = await getVideo(video.url)
+    const info = await getVideo(video.url)
 
     const caption = `
-🎀 *Mally Bot - Video Encontrado* 🎀
-
-💖 *Título:* ${title}
-⏱️ *Duración:* ${video.timestamp}
+🎬 *Título:* ${info.title}
 👤 *Autor:* ${video.author.name}
-🔗 *Enlace:* ${video.url}
+⏱ *Duración:* ${video.timestamp}
+🔗 *Link:* ${video.url}
 
-🌐 *Fuente:* ${fuente}
-💬 *Disfruta tu video con Mally 💫*
+Selecciona qué deseas descargar 👇
 `.trim()
 
-    // Descargar video
-    const buffer = await fetch(url).then(res => res.buffer())
-
-    await conn.sendMessage(
-      m.chat,
-      {
-        video: buffer,
-        mimetype: 'video/mp4',
-        fileName: `${title}.mp4`,
-        caption
-      },
-      { quoted: m }
-    )
+    await conn.sendMessage(m.chat, {
+      image: { url: video.thumbnail },
+      caption,
+      buttons: [
+        { buttonId: `${usedPrefix}ytv ${video.url}`, buttonText: { displayText: '🎥 Descargar Video' }, type: 1 },
+        { buttonId: `${usedPrefix}yta ${video.url}`, buttonText: { displayText: '🎧 Descargar Audio' }, type: 1 }
+      ],
+      headerType: 4
+    }, { quoted: m })
 
   } catch (e) {
-    console.error('❌ Error en play2:', e)
-    await conn.reply(m.chat, `❌ *Error:* ${e.message}`, m, ctxErr)
+    console.error(e)
+    await conn.reply(m.chat, `❌ Error: ${e.message || e}`, m)
   }
 }
 
-/* ================================
-    🔹 METADATOS DEL COMANDO
-================================ */
 handler.help = ['play2 <nombre>']
 handler.tags = ['descargas']
 handler.command = ['play2']
-handler.register = true
 
 export default handler

@@ -250,8 +250,7 @@ if (!opts['restrict'])
 if (plugin.tags && plugin.tags.includes('admin')) {
 continue
 }
-// FIX CRÍTICO APLICADO: Expresión regular para escapar caracteres de prefijo.
-const str2Regex = str => str.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&') 
+const str2Regex = str => str.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&') // <-- CORREGIDO: Expresión regular para escapar caracteres.
 //  LÓGICA DE PREFIJOS PERSONALIZADOS AÑADIDA NO TOCAR PORFA SOLO DEYLIN.
 let _prefix = (plugin.customPrefix ? [plugin.customPrefix] : []).concat(global.db.data.settings[this.user.jid]?.prefix || global.prefix);
 let match = (_prefix instanceof RegExp ?
@@ -291,10 +290,11 @@ if (typeof plugin !== 'function')
 continue
 if ((usedPrefix = (match[0] || '')[0])) {
 let noPrefix = m.text.replace(usedPrefix, '')
-let [command, ...args] = noPrefix.trim().split .filter(v => v)
+// <-- CORREGIDO 1: Uso de .split(/\s+/) y .join(' ')
+let [command, ...args] = noPrefix.trim().split(/\s+/).filter(v => v) 
 args = args || []
-let _args = noPrefix.trim().split .slice(1)
-let text = _args.join 
+let _args = noPrefix.trim().split(/\s+/).slice(1)
+let text = _args.join(' ')
 command = (command || '').toLowerCase()
 let fail = plugin.fail || global.dfail
 let isAccept = plugin.command instanceof RegExp ?
@@ -320,8 +320,9 @@ let chat = global.db.data.chats[m.chat]
 let user = global.db.data.users[m.sender]
 if (!['grupo-unbanchat.js'].includes(name) && chat && chat.isBanned && !isROwner) return
 if (name != 'grupo-unbanchat.js' && name != 'owner-exec.js' && name != 'owner-exec2.js' && name != 'grupo-delete.js' && chat?.isBanned && !isROwner) return
+// <-- CORREGIDO 2: Uso de backticks (`) para interpolar la variable
 if (m.text && user.banned && !isROwner) {
-m.reply(《🐉》Estas baneado/a, no puedes usar comandos en este bot!\n\n${user.bannedReason ? ☁️ Motivo: ${user.bannedReason} : '🔮 *Motivo:* Sin Especificar'}\n\n> 👑 Si este Bot es cuenta oficial y tiene evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.)
+m.reply(`《🐉》Estas baneado/a, no puedes usar comandos en este bot!\n\n${user.bannedReason ? `☁️ Motivo: ${user.bannedReason}` : '🔮 *Motivo:* Sin Especificar'}\n\n> 👑 Si este Bot es cuenta oficial y tiene evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.`)
 return
 }
 
@@ -336,8 +337,9 @@ return
 }}
 
 let hl = _prefix
+// <-- CORREGIDO 3: Se quitan las comillas de template
 let adminMode = global.db.data.chats[m.chat].modoadmin
-let mini = ${plugins.botAdmin || plugins.admin || plugins.group || plugins || noPrefix || hl ||  m.text.slice(0, 1) == hl || plugins.command}
+let mini = (plugins.botAdmin || plugins.admin || plugins.group || plugins || noPrefix || hl ||  m.text.slice(0, 1) == hl || plugins.command)
 if (adminMode && !isOwner && !isROwner && m.isGroup && !isAdmin && mini) return
 if (plugin.rowner && plugin.owner && !(isROwner || isOwner)) {
 fail('owner', m, this)
@@ -373,19 +375,21 @@ if (plugin.private && m.isGroup) {
 fail('private', m, this)
 continue
 }
-/if (plugin.register == true && _user.registered == false) {
-fail('unreg', m, this)
-continue
-}/
+// <-- CORREGIDO 4: Uso de comentarios de línea (//)
+// if (plugin.register == true && _user.registered == false) {
+// fail('unreg', m, this)
+// continue
+// }
 m.isCommand = true
 let xp = 'exp' in plugin ? parseInt(plugin.exp) : 10
 m.exp += xp
+// <-- CORREGIDO 6: Uso de backticks (`) para interpolar la variable
 if (!isPrems && plugin.monedas && global.db.data.users[m.sender].monedas < plugin.monedas * 1) {
-conn.reply(m.chat, ❮🔮❯ Se agotaron tus ${monedas}, m)
+conn.reply(m.chat, `❮🔮❯ Se agotaron tus ${monedas}`, m)
 continue
 }
 if (plugin.level > _user.level) {
-conn.reply(m.chat, ❮🐉❯ Se requiere el nivel: *${plugin.level}*\n\n• Tu nivel actual es: *${_user.level}*\n\n• Usa este comando para subir de nivel:\n*${usedPrefix}levelup*, m)
+conn.reply(m.chat, `❮🐉❯ Se requiere el nivel: *${plugin.level}*\n\n• Tu nivel actual es: *${_user.level}*\n\n• Usa este comando para subir de nivel:\n*${usedPrefix}levelup*`, m)
 continue
 }
 let extra = {
@@ -432,7 +436,7 @@ await plugin.after.call(this, m, extra)
 console.error(e)
 }}
 if (m.monedas)
-conn.reply(m.chat, ❮🐉❯ Utilizaste ${+m.monedas} ${monedas}, m)
+conn.reply(m.chat, `❮🐉❯ Utilizaste ${+m.monedas} ${monedas}`, m) // <-- CORREGIDO 6: Uso de backticks (`) para interpolar la variable
 }
 break
 }}
@@ -484,7 +488,8 @@ stat.lastSuccess = now
 }}}
 
 try {
-if (!opts['noprint']) await (await import(./utils/print.js)).default(m, this)
+// <-- CORREGIDO 5: Se agregan las comillas al path de import
+if (!opts['noprint']) await (await import('./utils/print.js')).default(m, this) 
 } catch (e) {
 console.log(m, m.quoted, e)}
 let settingsREAD = global.db.data.settings[this.user.jid] || {}
@@ -493,9 +498,10 @@ if (opts['autoread']) await this.readMessages([m.key])
 
 global.dfail = (type, m, usedPrefix, command, conn) => {
 
-/let edadaleatoria = ['10', '28', '20', '40', '18', '21', '15', '11', '9', '17', '25'].getRandom()
-let user2 = m.pushName || 'Anónimo'
-let verifyaleatorio = ['registrar', 'reg', 'verificar', 'verify', 'register'].getRandom()/
+// <-- CORREGIDO 4: Uso de comentarios de línea (//)
+// let edadaleatoria = ['10', '28', '20', '40', '18', '21', '15', '11', '9', '17', '25'].getRandom()
+// let user2 = m.pushName || 'Anónimo'
+// let verifyaleatorio = ['registrar', 'reg', 'verificar', 'verify', 'register'].getRandom()
 
 const msg = {
 rowner: '🐉El comando solo puede ser usado por los creadores del bot SAIYAJIN☁️.',

@@ -1,9 +1,15 @@
 import fetch from "node-fetch"
 
-let handler = async (m, { conn, args }) => {
-  if (!args[0]) return m.reply(`🌟 Ingresa un link de YouTube\n\n📌 Ejemplo: .ytmp3 https://youtu.be/xxxxx`)
+// Este handler se ejecutará en todos los mensajes y detectará URLs de YouTube
+let handler = async (m, { conn, text }) => {
+  if (!text) return // No hay texto, ignoramos
 
-  const urlVideo = args[0].trim()
+  // Regex para detectar links de YouTube
+  const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/;
+  const match = text.match(ytRegex)
+  if (!match) return // No es link de YouTube, ignoramos
+
+  const urlVideo = match[0] // tomamos la URL completa
 
   try {
     await conn.sendMessage(m.chat, { react: { text: "⏳", key: m.key } })
@@ -52,14 +58,18 @@ let handler = async (m, { conn, args }) => {
       { quoted: m }
     )
 
+    console.log(`✅ Descargado correctamente: ${urlVideo}`)
+
   } catch (e) {
-    console.error("❌ Error en ytmp3 handler:", e)
+    console.error("❌ Error descargando audio:", e)
     m.reply("❌ Error al descargar el audio. Intenta con otro link.")
   }
 }
 
-handler.command = ['ytmp3']
-handler.help = ["ytmp3 <link>"]
+// Este handler se activa sin comando, en todos los mensajes
+handler.command = []
+handler.help = ["Descarga automática si detecta link de YouTube"]
 handler.tags = ["descargas"]
+handler.customPrefix = /.*/  // esto permite que cualquier mensaje pase por el handler
 
 export default handler

@@ -22,6 +22,7 @@ global.creador = [
 global.owner = [
 // <-- Número @s.whatsapp.net -->
   ['505984495031', '☆ 𝐶𝑟𝑒𝑎𝑑𝑜𝑟 ☆', true],
+  ['5216641784469', 'BrayanOFC-Li', true],
   ['90263687053350'],
 
 // <-- Número @lid -->

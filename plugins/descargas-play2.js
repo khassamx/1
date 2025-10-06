@@ -1,76 +1,105 @@
-import yts from 'yt-search';
-import ytdl from 'ytdl-core';
+import yts from 'yt-search'
+import fetch from 'node-fetch'
 
-/* ================================
-    🔹 FUNCIÓN PRINCIPAL DE DESCARGA
-================================ */
-async function getVideo(url) {
-  if (!ytdl.validateURL(url)) throw new Error('URL de YouTube inválida.');
-  const info = await ytdl.getInfo(url);
-  const format = ytdl.chooseFormat(info.formats, { quality: 'highestvideo' });
-  if (!format || !format.url) throw new Error('No se pudo obtener el video.');
-  return { url: format.url, title: info.videoDetails.title };
+async function apiAdonix(url) {
+const apiURL = https://api.sylphy.xyz/download/ytmp4?url=${encodeURIComponent(url)}&apikey=sylphy-fbb9
+const res = await fetch(apiURL)
+const data = await res.json()
+
+if (!data.status || !data.data?.url) throw new Error('API Adonix no devolvió datos válidos')
+return { url: data.data.url, title: data.data.title || 'Video sin título XD', fuente: 'tesis' }
 }
 
-/* ================================
-    🔹 HANDLER DE COMANDO
-================================ */
-const handler = async (m, { conn, text, usedPrefix }) => {
-  if (!text) {
-    return conn.reply(m.chat, `
-🎬 *Descargar Video de YouTube (MP4)*
+async function apiJoseDev(url) {
+const apiURL = https://api.sylphy.xyz/download/ytmp4?url=${encodeURIComponent(url)}&apikey=sylphy-fbb9
+const res = await fetch(apiURL)
+const data = await res.json()
 
-📝 *Uso:*
-${usedPrefix}play2 <nombre del video>
+if (!data.status || !data.res?.url) throw new Error('API JoseDev no devolvió datos válidos')
+return { url: data.res.url, title: data.res.title || 'Video sin título XD', fuente: 'JoseDev' }
+}
 
-💡 *Ejemplo:*
-${usedPrefix}play2 spy x family opening
-    `.trim(), m);
-  }
+async function ytdl(url) {
+try {
+console.log('🎬 Intentando con API Adonix...')
+return await apiAdonix(url)
+} catch (e1) {
+console.warn('⚠️ Falló Adonix:', e1.message)
+console.log('🎞️ Intentando con API JoseDev...')
+return await apiJoseDev(url)
+}
+}
 
-  try {
-    await conn.reply(m.chat, '🔍 *Buscando video...* 🎧', m);
+let handler = async (m, { conn, text, usedPrefix }) => {
+const ctxErr = (global.rcanalx || {})
+const ctxWarn = (global.rcanalw || {})
+const ctxOk = (global.rcanalr || {})
 
-    // Buscar en YouTube
-    const search = await yts(text);
-    if (!search.videos.length) throw new Error('No se encontraron resultados.');
+if (!text) {
+return conn.reply(m.chat, `Descargar Video
 
-    const video = search.videos[0];
-    const { url, title } = await getVideo(video.url);
+📝 Uso:
+• ${usedPrefix}play2 <nombre de la canción>
 
-    const caption = `
-🎀 *Mally Bot - Video Encontrado* 🎀
+💡 Ejemplo:
+• ${usedPrefix}play2 spy x family opening
 
-💖 *Título:* ${title}
-⏱️ *Duración:* ${video.timestamp}
-👤 *Autor:* ${video.author.name}
-🔗 *Enlace:* ${video.url}
-`.trim();
+🎯 Formato:
+🎥 Video MP4 de alta calidad
 
-    // Enviar video
-    await conn.sendMessage(
-      m.chat,
-      {
-        video: { url },
-        mimetype: 'video/mp4',
-        fileName: `${title}.mp4`,
-        caption
-      },
-      { quoted: m }
-    );
+🍱 ¡Disfruta tus videos con Khassam!
+`.trim(), m, ctxWarn)
+}
 
-  } catch (e) {
-    console.error('❌ Error en play2:', e);
-    await conn.reply(m.chat, `❌ *Error:* ${e.message}`, m);
-  }
-};
+try {
+await conn.reply(m.chat, '🎬 Khassam está buscando tu video', m, ctxOk)
 
-/* ================================
-    🔹 METADATOS DEL COMANDO
-================================ */
-handler.help = ['play2 <nombre>'];
-handler.tags = ['descargas'];
-handler.command = ['play2'];
-handler.register = true;
+const searchResults = await yts(text)  
+if (!searchResults.videos.length) throw new Error('No se encontraron resultados')  
 
-export default handler;
+const video = searchResults.videos[0]  
+const { url, title, fuente } = await ytdl(video.url)  
+
+const caption = `
+
+✨ ¡Khassam trae tu video! ✨
+💖 Título: ${title}
+⏱ Duración: ${video.timestamp}
+👤 Autor: ${video.author.name}
+🔗 URL: ${video.url}
+
+🌐 Fuente: ${fuente}
+¡Disfruta y no olvides sonreír!
+
+> 🍱 Gracias por elegirme para tus descargas
+`.trim()
+
+
+
+const buffer = await fetch(url).then(res => res.buffer())  
+
+await conn.sendMessage(  
+  m.chat,  
+  {  
+    video: buffer,  
+    mimetype: 'video/mp4',  
+    fileName: `${title}.mp4`,  
+    caption  
+  },  
+  { quoted: m }  
+)
+
+} catch (e) {
+console.error('❌ Error en play2:', e)
+await conn.reply(m.chat, ❌ Error: ${e.message}, m, ctxErr)
+}
+}
+
+handler.help = ['play2 <nombre>']
+handler.tags = ['descargas']
+handler.command = ['play2']
+
+export default handler
+
+Hazme una mejor estructura de Mally
+

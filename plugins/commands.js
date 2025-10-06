@@ -1,4 +1,4 @@
-// plugins/commands.js
+/*// plugins/commands.js
 
 console.log('✅ Plugin: commands.js cargado (Comandos Generales)');
 
@@ -8,3 +8,4 @@ export function handleGeneralCommands(conn, m, args) {
     }
     // Añadir más comandos generales aquí (e.g., !status, !help)
 }
+*/

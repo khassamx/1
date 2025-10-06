@@ -542,8 +542,8 @@ _quickTest().catch(console.error)
 async function isValidPhoneNumber(number) {
 try {
 number = number.replace(/\s+/g, '')
-if (number.startsWith('595')) {
-number = number.replace('+595', '+52');
+if (number.startsWith('521')) {
+number = number.replace('+521', '+52');
 } else if (number.startsWith('+52') && number[4] === '1') {
 number = number.replace('+52 1', '+52');
 }

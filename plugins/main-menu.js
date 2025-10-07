@@ -7,7 +7,8 @@ const botname = '🦉 MALLY🦉'
 const creador = 'KHASSAM'
 const developer = 'BRAYAN OFC'
 const version = '1.0.0'
-const rcanalw = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V/129' // Canal oficial
+const canalOficial = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V/129'
+const numeroDueño = '+595XXXXXXXXX' // Poner tu número real
 
 let handler = async (m, { conn, usedPrefix: _p }) => {
   try {
@@ -31,7 +32,7 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
     user.msgCount += 1
     global.db.data.users[userId] = user
 
-    // Menú estilo mini-poster deluxe para WhatsApp con canal
+    // Menú deluxe
     let menuText = `
 🌸✨🔥 MALLY BOT 🔥✨🌸
 ===========================
@@ -64,16 +65,23 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 📞 *Creador / Contacto*
 💛 .owner
 
-📺 *Canal Oficial*  
-💚 ${rcanalw}
-
 🦉 SUBBOT
 💚 .qr
 💖 .code
 `
 
-    // Enviar menú
-    await conn.sendMessage(m.chat, { text: menuText, contextInfo: { mentionedJid: [userId] } })
+    // Botones del menú
+    const rcanalw = {
+      templateButtons: [
+        { urlButton: { displayText: '🌸 Canal Oficial', url: canalOficial } },
+        { quickReplyButton: { displayText: '🔄 Actualizar Bot', id: 'update' } },
+        { callButton: { displayText: '📞 Llamar al dueño', phoneNumber: numeroDueño } }
+      ],
+      headerType: 1 // 1 = solo texto
+    }
+
+    // Enviar menú con botones
+    await conn.reply(m.chat, menuText, m, rcanalw)
 
   } catch (e) {
     await conn.sendMessage(m.chat, { text: `❌ ERROR EN EL MENÚ:\n${e}` }, { quoted: m })

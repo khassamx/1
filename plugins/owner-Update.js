@@ -102,7 +102,7 @@ ${list}
 
     const fkontak = await makeFkontak().catch(() => null)
 
-    // 📤 Enviar resultado solo al grupo/chat donde se encuentre el dueño
+    // 📤 Enviar resultado solo al chat o grupo donde esté el dueño
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
   } catch (error) {

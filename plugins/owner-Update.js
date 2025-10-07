@@ -36,7 +36,7 @@ let handler = async (m, { conn, args }) => {
   try {
     global.mallyMessages++ // contador de mensajes global 💬
 
-    await conn.reply(m.chat, '⏳ *Buscando actualizaciones...*', m)
+    await conn.reply(m.chat, '⏳ *Buscando actualizaciones...*', m, rcanalw)
 
     const cmd = 'git --no-pager pull --rebase --autostash' + (args?.length ? ' ' + args.join(' ') : '')
     const output = execSync(cmd, { cwd: ROOT, encoding: 'utf8' })
@@ -93,9 +93,10 @@ ${list}
     }
 
     const fkontak = await makeFkontak().catch(() => null)
-    await conn.reply(m.chat, response.trim(), fkontak || m)
+    await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
   } catch (error) {
+    // 🔍 Detectar conflictos locales
     try {
       const status = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf8' }).trim()
       if (status) {
@@ -119,7 +120,7 @@ ${conflictedFiles.map(f => '• ' + f.slice(3)).join('\n')}
 
 💡 *Sugerencia:* realiza un backup y reinstala el bot o actualiza manualmente.
 `
-          return await conn.reply(m.chat, conflictMsg.trim(), m)
+          return await conn.reply(m.chat, conflictMsg.trim(), m, rcanalw)
         }
       }
     } catch {}
@@ -127,7 +128,7 @@ ${conflictedFiles.map(f => '• ' + f.slice(3)).join('\n')}
     const msg = /not a git repository/i.test(error?.message || '')
       ? '❌ *Este directorio no es un repositorio Git.*\nUsa `git init` y agrega el remoto antes de usar `update`.'
       : `❌ *Error al actualizar:*\n${error?.message || 'Error desconocido.'}`
-    await conn.reply(m.chat, msg, m)
+    await conn.reply(m.chat, msg, m, rcanalw)
   }
 }
 

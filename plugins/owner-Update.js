@@ -32,10 +32,23 @@ const CANAL_WHATSAPP = '120363045678901234@g.us' // 👈 reemplaza con el JID de
 // 💻 Handler principal
 let handler = async (m, { conn, args }) => {
   try {
-    global.mallyMessages++
+    // Sincronizar contadores para que siempre sean iguales
+    const contadorGlobal = Math.max(global.mallyUpdates, global.mallyMessages)
+    global.mallyUpdates = contadorGlobal
+    global.mallyMessages = contadorGlobal
 
-    // Mensaje inicial con botón
-    await conn.reply(m.chat, '⏳ *Buscando actualizaciones...*', m, rcanalw)
+    // 🌸 Mensaje inicial bonito con contador
+    const initMessage = `
+╭┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄┄┄
+       ⏳ *Buscando actualizaciones...* ⏳
+╰┄┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄
+
+💬 *Mensajes procesados:* ${contadorGlobal}
+🧮 *Total de actualizaciones:* ${contadorGlobal}
+
+🌸 Mally Bot está trabajando para ti 🌸
+`
+    await conn.reply(m.chat, initMessage, m, rcanalw)
 
     // Ejecutar git pull
     const cmd = 'git --no-pager pull --rebase --autostash' + (args?.length ? ' ' + args.join(' ') : '')
@@ -50,10 +63,10 @@ let handler = async (m, { conn, args }) => {
     // ===============================
     if (isUpToDate) {
       response = `
-1️⃣ ✅ *Mally Bot* ya está completamente actualizada 🌸
+✅ *Mally Bot* ya está completamente actualizada 🌸
 
-💬 *Mensajes procesados:* ${global.mallyMessages}
-🧮 *Total de actualizaciones:* ${global.mallyUpdates}
+💬 *Mensajes procesados:* ${contadorGlobal}
+🧮 *Total de actualizaciones:* ${contadorGlobal}
 
 ✨ Todo está al día y funcionando a la perfección 💖
 `
@@ -62,7 +75,9 @@ let handler = async (m, { conn, args }) => {
     // 🌟 Caso 2: Se aplicaron actualizaciones
     // ===============================
     else {
-      global.mallyUpdates++
+      global.mallyUpdates = contadorGlobal + 1
+      global.mallyMessages = contadorGlobal + 1
+
       const changed = []
       const lines = output.split(/\r?\n/)
       for (const ln of lines) {
@@ -80,7 +95,7 @@ let handler = async (m, { conn, args }) => {
       const list = changed.slice(0, 10).map(f => `✅ ${f}`).join('\n') || '✅ Ningún archivo relevante'
 
       response = `
-2️⃣ 🆙 *Mally Bot se actualizó correctamente* 🌸
+🆙 *Mally Bot se actualizó correctamente* 🌸
 
 ${banner.join('\n')}
 ${list}

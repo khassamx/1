@@ -1,17 +1,7 @@
 // 🦉 Menú ULTRA DELUXE de MALLY BOT
 // Creado por Khassam | Developer: Brayan OFC
 
-import fetch from 'node-fetch'
-
-const botname = '🦉 MALLY🦉'
-const creador = 'KHASSAM'
-const developer = 'BRAYAN OFC'
-const version = '1.0.0'
-const canalOficial = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V/129'
-const numeroDueño = '+595XXXXXXXXX' // Reemplazar con tu número
-const bannerURL = 'https://i.ibb.co/2yYw8yX/banner.png' // Imagen de encabezado opcional
-
-let handler = async (m, { conn, usedPrefix: _p }) => {
+let handler = async (m, { conn }) => {
   try {
     // Inicializar base de datos si no existe
     if (!global.db) global.db = {}
@@ -29,11 +19,11 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
     user.msgCount += 1
     global.db.data.users[userId] = user
 
-    // Texto del menú
+    // Texto del menú ultra visual
     let menuText = `
 ✨🌸────────────🌸✨
          🦉 MALLY BOT 🦉
-           v${version}
+           v1.0.0
 ✨🌸────────────🌸✨
 
 👋 Hola @${userId.split('@')[0]}!
@@ -65,19 +55,18 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 ✨─────────🌸─────────✨
 `
 
-    // Botones funcionales
+    // Botones del menú
     const buttons = [
-      { url: canalOficial, text: '🌸 Canal Oficial', type: 1 },
+      { url: 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V/129', text: '🌸 Canal Oficial', type: 1 },
       { id: 'update', text: '🔄 Actualizar Bot', type: 2 },
-      { phoneNumber: numeroDueño, text: '📞 Llamar al dueño', type: 3 }
+      { phoneNumber: '+595XXXXXXXXX', text: '📞 Llamar al dueño', type: 3 }
     ]
 
-    // Enviar menú con foto desde URL y botones
+    // Enviar menú solo con texto + botones
     await conn.sendMessage(
       m.chat,
       {
-        image: { url: bannerURL },
-        caption: menuText,
+        text: menuText,
         footer: '🌸 Mally Bot ULTRA DELUXE 🌸',
         templateButtons: buttons,
         mentions: [userId]

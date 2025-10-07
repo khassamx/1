@@ -1,64 +1,66 @@
-// 🦉 Menú ULTRA VISUAL DELUXE de MALLY BOT
+// 🦉 Menú MALLY BOT con foto y botones
 // Creado por Khassam | Developer: Brayan OFC
+
+import fs from 'fs'
 
 let handler = async (m, { conn }) => {
   try {
-    // Usuario
     let userId = m.mentionedJid?.[0] || m.sender
 
-    // Ping y uptime
+    // Stats
     let uptime = clockString(process.uptime() * 1000)
     let ping = Date.now() - m.messageTimestamp
+    let totalMsgs = global.db?.data?.global?.totalMessages || 0
+    let userData = global.db?.data?.users?.[userId] || { level: 1, premium: false }
 
-    // Menú ultra visual
+    // Texto del menú
     let menuText = `
-✨🌸────────────🌸✨
-         🦉 MALLY BOT 🦉
-           v1.0.0
-✨🌸────────────🌸✨
+🌸✨🦉 MALLY BOT 🦉✨🌸
 
-👋 Hola, @${userId.split('@')[0]}!
+👋 Hola @${userId.split('@')[0]}
 ⏱ Uptime: ${uptime} | 📶 Ping: ${ping}ms
-🗨️ Mensajes globales: ${global.db?.data?.global?.totalMessages || 0}
-⭐ Nivel: ${global.db?.data?.users?.[userId]?.level || 1}
-💎 Premium: ${global.db?.data?.users?.[userId]?.premium ? 'Sí' : 'No'}
+🗨️ Mensajes globales: ${totalMsgs}
+⭐ Nivel: ${userData.level} | 💎 Premium: ${userData.premium ? 'Sí' : 'No'}
 
 ✨─────────🌸─────────✨
 👥 GRUPOS / ADMIN
-💙 .kick @usuario
-💜 .antilink on/off
-💛 .antilink2 on/off
+.on antilink
+.off antilink
+.kick @user
 
 ✨─────────🌸─────────✨
-🎵 DESCARGAS / MULTIMEDIA
-💚 .play
-💖 .pla2
-💙 .tiktok
-💜 .ig
+🎵 DESCARGAS
+.play
+.play2
+.ig
+.tiktok
 
 ✨─────────🌸─────────✨
-📞 CREADOR / CONTACTO
-💛 .owner
+📞 CREADOR
+.owner
 
 ✨─────────🌸─────────✨
 🦉 SUBBOT
-💚 .qr
-💖 .code
+.qr
+.code
 ✨─────────🌸─────────✨
 `
 
-    // Botones funcionales
+    // Botones del menú
     const buttons = [
       { url: 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V/129', text: '🌸 Canal Oficial', type: 1 },
       { id: 'update', text: '🔄 Actualizar Bot', type: 2 },
       { phoneNumber: '+595XXXXXXXXX', text: '📞 Llamar al dueño', type: 3 }
     ]
 
-    // Enviar mensaje con botones
+    // Foto de encabezado (ejemplo: banner.png en tu proyecto)
+    let image = fs.readFileSync('./banner.png') // reemplazar con la ruta de tu foto
+
     await conn.sendMessage(
       m.chat,
       {
-        text: menuText,
+        image: image,
+        caption: menuText,
         footer: '🌸 Mally Bot ULTRA VISUAL 🌸',
         templateButtons: buttons,
         mentions: [userId]

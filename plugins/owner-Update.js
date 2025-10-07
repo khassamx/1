@@ -25,17 +25,19 @@ async function makeFkontak() {
   }
 }
 
-// 🧮 Contador global de actualizaciones
+// 🧮 Contadores globales
 global.mallyUpdates = global.mallyUpdates || 0
+global.mallyMessages = global.mallyMessages || 0
 
 // ===============================
 // 💻 HANDLER PRINCIPAL
 // ===============================
 let handler = async (m, { conn, args }) => {
   try {
+    global.mallyMessages++ // contador de mensajes global 💬
+
     await conn.reply(m.chat, '⏳ *Buscando actualizaciones...*', m)
 
-    // Ejecutar comando de actualización
     const cmd = 'git --no-pager pull --rebase --autostash' + (args?.length ? ' ' + args.join(' ') : '')
     const output = execSync(cmd, { cwd: ROOT, encoding: 'utf8' })
 
@@ -43,9 +45,23 @@ let handler = async (m, { conn, args }) => {
     const isUpToDate = lower.includes('already up to date') || lower.includes('up to date')
     let response
 
+    // ===============================
+    // 🩷 CASO 1: Ya está actualizado
+    // ===============================
     if (isUpToDate) {
-      response = '✅ *Mally Bot* ya está completamente actualizada 🌸'
-    } else {
+      response = `
+1️⃣ ✅ *Mally Bot* ya está completamente actualizada 🌸
+
+💬 *Mensajes procesados globalmente:* ${global.mallyMessages.toLocaleString()}
+🧮 *Total de actualizaciones realizadas:* ${global.mallyUpdates.toLocaleString()}
+
+✨ Todo está al día y funcionando a la perfección 💖
+`
+    } 
+    // ===============================
+    // 🌟 CASO 2: Se aplicaron actualizaciones
+    // ===============================
+    else {
       global.mallyUpdates++
       const changed = []
       const lines = output.split(/\r?\n/)
@@ -55,23 +71,31 @@ let handler = async (m, { conn, args }) => {
       }
 
       const banner = [
-        '╭━━━━━━━🌸━━━━━━━╮',
-        '     🌟 *Mally Bot Update* 🌟',
-        '╰━━━━━━━🌸━━━━━━━╯',
+        '╭┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄┄┄',
+        '       🌸 *Se han aplicado actualizaciones* 🌸',
+        '╰┄┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄',
         '',
-        `🆙 *Actualización #${global.mallyUpdates} completada*`,
-        '📂 *Archivos modificados:*',
-        ''
+        '📂 *Archivos actualizados:*'
       ]
+      const list = changed.slice(0, 10).map(f => `✅ ${f}`).join('\n') || '✅ Ningún archivo relevante'
 
-      const list = changed.slice(0, 10).map(f => `✨ ${f}`).join('\n') || '✅ Ningún archivo relevante'
-      response = `${banner.join('\n')}${list}\n\n🚀 *Mally Bot ahora está lista para brillar!* 💖`
+      response = `
+2️⃣ 🆙 *Mally Bot se actualizó correctamente* 🌸
+
+${banner.join('\n')}
+${list}
+
+🧮 *Total de actualizaciones:* ${global.mallyUpdates.toLocaleString()}
+💬 *Mensajes procesados:* ${global.mallyMessages.toLocaleString()}
+
+🚀 *Mally Bot ahora está lista para brillar aún más!* 💖
+`
     }
 
     const fkontak = await makeFkontak().catch(() => null)
-    await conn.reply(m.chat, response, fkontak || m)
+    await conn.reply(m.chat, response.trim(), fkontak || m)
+
   } catch (error) {
-    // 🔍 Detectar conflictos o cambios locales
     try {
       const status = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf8' }).trim()
       if (status) {
@@ -88,22 +112,20 @@ let handler = async (m, { conn, args }) => {
           ))
 
         if (conflictedFiles.length > 0) {
-          const conflictMsg = [
-            '⚠️ *Conflictos detectados!*',
-            '',
-            '🧩 Archivos afectados:',
-            conflictedFiles.map(f => '• ' + f.slice(3)).join('\n'),
-            '',
-            '💡 *Sugerencia:* Realiza un backup y reinstala el bot o actualiza manualmente.'
-          ].join('\n')
-          return await conn.reply(m.chat, conflictMsg, m)
+          const conflictMsg = `
+⚠️ *Conflictos detectados en archivos locales:*
+
+${conflictedFiles.map(f => '• ' + f.slice(3)).join('\n')}
+
+💡 *Sugerencia:* realiza un backup y reinstala el bot o actualiza manualmente.
+`
+          return await conn.reply(m.chat, conflictMsg.trim(), m)
         }
       }
     } catch {}
 
-    // ❌ Error genérico
     const msg = /not a git repository/i.test(error?.message || '')
-      ? '❌ *Directorio no es un repositorio Git.*\nUsa `git init` y agrega el remoto antes de actualizar.'
+      ? '❌ *Este directorio no es un repositorio Git.*\nUsa `git init` y agrega el remoto antes de usar `update`.'
       : `❌ *Error al actualizar:*\n${error?.message || 'Error desconocido.'}`
     await conn.reply(m.chat, msg, m)
   }

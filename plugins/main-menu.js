@@ -1,7 +1,15 @@
-// 🦉 Menú ULTRA DELUXE de MALLY BOT
+// 🦉 Menú DELUXE TITAN de MALLY BOT
 // Creado por Khassam | Developer: Brayan OFC
 
-let handler = async (m, { conn }) => {
+import fetch from 'node-fetch'
+
+const botname = '🦉 MALLY🦉'
+const creador = 'KHASSAM'
+const developer = 'BRAYAN OFC'
+const version = '1.0.0'
+const rcanalw = 'https://t.me/TuCanalOficial' // <- aquí agregas el canal
+
+let handler = async (m, { conn, usedPrefix: _p }) => {
   try {
     // Inicializar base de datos si no existe
     if (!global.db) global.db = {}
@@ -11,80 +19,73 @@ let handler = async (m, { conn }) => {
 
     let userId = m.mentionedJid?.[0] || m.sender
     let user = global.db.data.users[userId] || { exp: 0, level: 1, premium: false, msgCount: 0 }
-
-    // Stats
     let uptime = clockString(process.uptime() * 1000)
-    let ping = Date.now() - m.messageTimestamp
+
+    // Calcular ping
+    let start = Date.now()
+    await conn.sendPresenceUpdate('composing', m.chat)
+    let ping = Date.now() - start
+
+    // Incrementar contador global y por usuario
     global.db.data.global.totalMessages += 1
     user.msgCount += 1
     global.db.data.users[userId] = user
 
-    // Texto del menú ultra visual
+    // Menú estilo mini-poster deluxe para WhatsApp con canal
     let menuText = `
-✨🌸────────────🌸✨
-         🦉 MALLY BOT 🦉
-           v1.0.0
-✨🌸────────────🌸✨
+🌸✨🔥 MALLY BOT 🔥✨🌸
+===========================
 
-👋 Hola @${userId.split('@')[0]}!
-⏱ Uptime: ${uptime} | 📶 Ping: ${ping}ms
-🗨️ Mensajes globales: ${global.db.data.global.totalMessages}
-⭐ Nivel: ${user.level} | 💎 Premium: ${user.premium ? 'Sí' : 'No'}
+👋 ¡Hola! @${userId.split('@')[0]}
+🛠️ Creador: ${creador}
+💻 Developer: ${developer}
+⏱ Uptime: ${uptime}
+📶 Ping: ${ping}ms
+🗨️ Chat global: ${global.db.data.global.totalMessages}
+⭐ Nivel: ${user.level}
+💎 Premium: ${user.premium ? 'Sí' : 'No'}
 
-✨─────────🌸─────────✨
-👥 GRUPOS / ADMIN
-.on antilink
-.off antilink
-.kick @user
+📊 ➤ CONTADOR GLOBAL ➤ 📊
+💛 Registra mensajes y acciones
+💚 Actualización completa solo en canal autorizado
 
-✨─────────🌸─────────✨
-🎵 DESCARGAS
-.play
-.play2
-.ig
-.tiktok
+📋 🎨 MENÚ PRINCIPAL 🎨 📋
+---------------------------------
+👥 *Grupos / Administración*
+💙 .kick @user
+💜 .antilink on/off
 
-✨─────────🌸─────────✨
-📞 CREADOR
-.owner
+🎵 *Descargas / Multimedia*
+💚 .play
+💖 .pla2
+💙 .tiktok
+💜 .ig
 
-✨─────────🌸─────────✨
+📞 *Creador / Contacto*
+💛 .owner
+
+📺 *Canal Oficial*  
+💚 ${rcanalw}
+
 🦉 SUBBOT
-.qr
-.code
-✨─────────🌸─────────✨
+💚 .qr
+💖 .code
 `
 
-    // Botones del menú
-    const buttons = [
-      { url: 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V/129', text: '🌸 Canal Oficial', type: 1 },
-      { id: 'update', text: '🔄 Actualizar Bot', type: 2 },
-      { phoneNumber: '+595XXXXXXXXX', text: '📞 Llamar al dueño', type: 3 }
-    ]
-
-    // Enviar menú solo con texto + botones
-    await conn.sendMessage(
-      m.chat,
-      {
-        text: menuText,
-        footer: '🌸 Mally Bot ULTRA DELUXE 🌸',
-        templateButtons: buttons,
-        mentions: [userId]
-      },
-      { quoted: m }
-    )
+    // Enviar menú
+    await conn.sendMessage(m.chat, { text: menuText, contextInfo: { mentionedJid: [userId] } })
 
   } catch (e) {
-    console.error(e)
-    await conn.sendMessage(
-      m.chat,
-      { text: `❌ ERROR EN EL MENÚ:\n${e}` },
-      { quoted: m }
-    )
+    await conn.sendMessage(m.chat, { text: `❌ ERROR EN EL MENÚ:\n${e}` }, { quoted: m })
   }
 }
 
-// Función para convertir uptime a texto
+handler.help = ['menu']
+handler.tags = ['main']
+handler.command = ['menu', 'help', 'mallymenu', 'titanmenu']
+export default handler
+
+// Función para convertir uptime en texto
 function clockString(ms) {
   let d = Math.floor(ms / 86400000)
   let h = Math.floor(ms / 3600000) % 24
@@ -92,9 +93,3 @@ function clockString(ms) {
   let s = Math.floor(ms / 1000) % 60
   return `${d ? d + 'd ' : ''}${h ? h + 'h ' : ''}${m ? m + 'm ' : ''}${s}s`
 }
-
-// Exportar handler y registrar comandos
-export default handler
-handler.command = /^(menu|help|mallymenu|titanmenu)$/i
-handler.tags = ['main']
-handler.help = ['menu', 'help']

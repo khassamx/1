@@ -26,13 +26,10 @@ async function makeFkontak() {
 global.mallyUpdates = global.mallyUpdates || 0
 global.mallyMessages = global.mallyMessages || 0
 
-// 📍 Canal de WhatsApp donde se enviará la actualización
-const CANAL_WHATSAPP = '120363045678901234@g.us' // 👈 reemplaza con el JID de tu canal
-
 // 💻 Handler principal
 let handler = async (m, { conn, args }) => {
   try {
-    // Sincronizar contadores para que siempre sean iguales
+    // 🔹 Sincronizar contadores para que siempre sean iguales
     const contadorGlobal = Math.max(global.mallyUpdates, global.mallyMessages)
     global.mallyUpdates = contadorGlobal
     global.mallyMessages = contadorGlobal
@@ -58,9 +55,7 @@ let handler = async (m, { conn, args }) => {
     const isUpToDate = lower.includes('already up to date') || lower.includes('up to date')
     let response
 
-    // ===============================
     // 🌸 Caso 1: Ya está actualizado
-    // ===============================
     if (isUpToDate) {
       response = `
 ✅ *Mally Bot* ya está completamente actualizada 🌸
@@ -71,9 +66,7 @@ let handler = async (m, { conn, args }) => {
 ✨ Todo está al día y funcionando a la perfección 💖
 `
     } 
-    // ===============================
     // 🌟 Caso 2: Se aplicaron actualizaciones
-    // ===============================
     else {
       global.mallyUpdates = contadorGlobal + 1
       global.mallyMessages = contadorGlobal + 1
@@ -109,13 +102,8 @@ ${list}
 
     const fkontak = await makeFkontak().catch(() => null)
 
-    // 📤 Enviar al canal de WhatsApp
-    if (m.chat !== CANAL_WHATSAPP) {
-      await conn.reply(m.chat, '⚠️ *Solo el canal autorizado puede recibir la actualización completa.*', m, rcanalw)
-      await conn.sendMessage(CANAL_WHATSAPP, { text: response.trim(), ...fkontak }, { quoted: m })
-    } else {
-      await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
-    }
+    // 📤 Enviar resultado solo al grupo/chat donde se encuentre el dueño
+    await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
   } catch (error) {
     const msg = /not a git repository/i.test(error?.message || '')

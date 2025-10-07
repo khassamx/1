@@ -7,6 +7,7 @@ const botname = '🦉 MALLY🦉'
 const creador = 'KHASSAM'
 const developer = 'BRAYAN OFC'
 const version = '1.0.0'
+const rcanalw = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V/129' // Canal oficial
 
 let handler = async (m, { conn, usedPrefix: _p }) => {
   try {
@@ -22,7 +23,7 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 
     // Calcular ping
     let start = Date.now()
-    await conn.sendPresenceUpdate('composing', m.chat) // enviar presencia temporal para medir ping
+    await conn.sendPresenceUpdate('composing', m.chat)
     let ping = Date.now() - start
 
     // Incrementar contador global y por usuario
@@ -30,7 +31,7 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
     user.msgCount += 1
     global.db.data.users[userId] = user
 
-    // Menú estilo mini-poster deluxe para WhatsApp con ping
+    // Menú estilo mini-poster deluxe para WhatsApp con canal
     let menuText = `
 🌸✨🔥 MALLY BOT 🔥✨🌸
 ===========================
@@ -62,6 +63,9 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 
 📞 *Creador / Contacto*
 💛 .owner
+
+📺 *Canal Oficial*  
+💚 ${rcanalw}
 
 🦉 SUBBOT
 💚 .qr

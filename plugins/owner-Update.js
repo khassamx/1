@@ -3,14 +3,11 @@ import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
 import fetch from 'node-fetch'
 
-// ===============================
-// 🌸 CONFIGURACIÓN BASE
-// ===============================
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const ROOT = path.resolve(__dirname, '..')
 
-// 🌐 Mini función para generar contacto visual
+// 🌐 Miniatura de contacto
 async function makeFkontak() {
   try {
     const res = await fetch('https://raw.githubusercontent.com/WillZek/Storage-CB2/main/images/d110942e81b3.jpg')
@@ -29,15 +26,18 @@ async function makeFkontak() {
 global.mallyUpdates = global.mallyUpdates || 0
 global.mallyMessages = global.mallyMessages || 0
 
-// ===============================
-// 💻 HANDLER PRINCIPAL
-// ===============================
+// 📍 Canal de WhatsApp donde se enviará la actualización
+const CANAL_WHATSAPP = '120363045678901234@g.us' // 👈 reemplaza con el JID de tu canal
+
+// 💻 Handler principal
 let handler = async (m, { conn, args }) => {
   try {
-    global.mallyMessages++ // contador de mensajes global 💬
+    global.mallyMessages++
 
+    // Mensaje inicial con botón
     await conn.reply(m.chat, '⏳ *Buscando actualizaciones...*', m, rcanalw)
 
+    // Ejecutar git pull
     const cmd = 'git --no-pager pull --rebase --autostash' + (args?.length ? ' ' + args.join(' ') : '')
     const output = execSync(cmd, { cwd: ROOT, encoding: 'utf8' })
 
@@ -46,20 +46,20 @@ let handler = async (m, { conn, args }) => {
     let response
 
     // ===============================
-    // 🩷 CASO 1: Ya está actualizado
+    // 🌸 Caso 1: Ya está actualizado
     // ===============================
     if (isUpToDate) {
       response = `
 1️⃣ ✅ *Mally Bot* ya está completamente actualizada 🌸
 
-💬 *Mensajes procesados globalmente:* ${global.mallyMessages.toLocaleString()}
-🧮 *Total de actualizaciones realizadas:* ${global.mallyUpdates.toLocaleString()}
+💬 *Mensajes procesados:* ${global.mallyMessages}
+🧮 *Total de actualizaciones:* ${global.mallyUpdates}
 
 ✨ Todo está al día y funcionando a la perfección 💖
 `
     } 
     // ===============================
-    // 🌟 CASO 2: Se aplicaron actualizaciones
+    // 🌟 Caso 2: Se aplicaron actualizaciones
     // ===============================
     else {
       global.mallyUpdates++
@@ -85,46 +85,24 @@ let handler = async (m, { conn, args }) => {
 ${banner.join('\n')}
 ${list}
 
-🧮 *Total de actualizaciones:* ${global.mallyUpdates.toLocaleString()}
-💬 *Mensajes procesados:* ${global.mallyMessages.toLocaleString()}
+🧮 *Total de actualizaciones:* ${global.mallyUpdates}
+💬 *Mensajes procesados:* ${global.mallyMessages}
 
 🚀 *Mally Bot ahora está lista para brillar aún más!* 💖
 `
     }
 
     const fkontak = await makeFkontak().catch(() => null)
-    await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
+
+    // 📤 Enviar al canal de WhatsApp
+    if (m.chat !== CANAL_WHATSAPP) {
+      await conn.reply(m.chat, '⚠️ *Solo el canal autorizado puede recibir la actualización completa.*', m, rcanalw)
+      await conn.sendMessage(CANAL_WHATSAPP, { text: response.trim(), ...fkontak }, { quoted: m })
+    } else {
+      await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
+    }
 
   } catch (error) {
-    // 🔍 Detectar conflictos locales
-    try {
-      const status = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf8' }).trim()
-      if (status) {
-        const conflictedFiles = status
-          .split('\n')
-          .filter(Boolean)
-          .filter(line => !(
-            line.includes('node_modules') ||
-            line.includes('sessions') ||
-            line.includes('tmp/') ||
-            line.includes('.cache') ||
-            line.includes('package-lock.json') ||
-            line.includes('database.json')
-          ))
-
-        if (conflictedFiles.length > 0) {
-          const conflictMsg = `
-⚠️ *Conflictos detectados en archivos locales:*
-
-${conflictedFiles.map(f => '• ' + f.slice(3)).join('\n')}
-
-💡 *Sugerencia:* realiza un backup y reinstala el bot o actualiza manualmente.
-`
-          return await conn.reply(m.chat, conflictMsg.trim(), m, rcanalw)
-        }
-      }
-    } catch {}
-
     const msg = /not a git repository/i.test(error?.message || '')
       ? '❌ *Este directorio no es un repositorio Git.*\nUsa `git init` y agrega el remoto antes de usar `update`.'
       : `❌ *Error al actualizar:*\n${error?.message || 'Error desconocido.'}`
@@ -132,9 +110,7 @@ ${conflictedFiles.map(f => '• ' + f.slice(3)).join('\n')}
   }
 }
 
-// ===============================
-// 📚 METADATOS
-// ===============================
+// 📚 Metadatos
 handler.help = ['update', 'actualizar']
 handler.tags = ['owner']
 handler.command = /^(update|actualizar|up)$/i

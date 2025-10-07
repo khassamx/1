@@ -1,7 +1,7 @@
 // 🦉 Menú DELUXE TITAN de MALLY BOT
 // Creado por Khassam | Developer: Brayan OFC
 
-import fetch from 'node-fetch'
+import { generateWAMessageFromContent, proto } from '@whiskeysockets/baileys'
 
 const botname = '🦉 MALLY🦉'
 const creador = 'KHASSAM'
@@ -10,7 +10,7 @@ const version = '1.0.0'
 const canalOficial = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V/129'
 const numeroDueño = '+595XXXXXXXXX' // Poner tu número real
 
-let handler = async (m, { conn, usedPrefix: _p }) => {
+let handler = async (m, { conn }) => {
   try {
     // Inicializar base de datos si no existe
     if (!global.db) global.db = {}
@@ -22,7 +22,7 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
     let user = global.db.data.users[userId] || { exp: 0, level: 1, premium: false, msgCount: 0 }
     let uptime = clockString(process.uptime() * 1000)
 
-    // Calcular ping
+    // Calcular ping simple
     let start = Date.now()
     await conn.sendPresenceUpdate('composing', m.chat)
     let ping = Date.now() - start
@@ -32,7 +32,7 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
     user.msgCount += 1
     global.db.data.users[userId] = user
 
-    // Menú deluxe
+    // Texto del menú
     let menuText = `
 🌸✨🔥 MALLY BOT 🔥✨🌸
 ===========================
@@ -70,28 +70,32 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 💖 .code
 `
 
-    // Botones del menú
-    const rcanalw = {
-      templateButtons: [
-        { urlButton: { displayText: '🌸 Canal Oficial', url: canalOficial } },
-        { quickReplyButton: { displayText: '🔄 Actualizar Bot', id: 'update' } },
-        { callButton: { displayText: '📞 Llamar al dueño', phoneNumber: numeroDueño } }
-      ],
-      headerType: 1 // 1 = solo texto
+    // Botones
+    const templateButtons = [
+      { urlButton: { displayText: '🌸 Canal Oficial', url: canalOficial } },
+      { quickReplyButton: { displayText: '🔄 Actualizar Bot', id: 'update' } },
+      { callButton: { displayText: '📞 Llamar al dueño', phoneNumber: numeroDueño } }
+    ]
+
+    // Construir mensaje hydratedTemplate
+    const message = {
+      templateMessage: {
+        hydratedTemplate: {
+          hydratedContentText: menuText,
+          templateButtons: templateButtons,
+          hydratedFooterText: `🌸 ${botname} v${version} 🌸`
+        }
+      }
     }
 
-    // Enviar menú con botones
-    await conn.reply(m.chat, menuText, m, rcanalw)
+    // Enviar menú
+    await conn.sendMessage(m.chat, message, { quoted: m })
 
   } catch (e) {
+    console.error(e)
     await conn.sendMessage(m.chat, { text: `❌ ERROR EN EL MENÚ:\n${e}` }, { quoted: m })
   }
 }
-
-handler.help = ['menu']
-handler.tags = ['main']
-handler.command = ['menu', 'help', 'mallymenu', 'titanmenu']
-export default handler
 
 // Función para convertir uptime en texto
 function clockString(ms) {
@@ -101,3 +105,6 @@ function clockString(ms) {
   let s = Math.floor(ms / 1000) % 60
   return `${d ? d + 'd ' : ''}${h ? h + 'h ' : ''}${m ? m + 'm ' : ''}${s}s`
 }
+
+export default handler
+handler.command = ['menu', 'help', 'mallymenu', 'titanmenu']

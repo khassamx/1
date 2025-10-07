@@ -23,25 +23,23 @@ async function makeFkontak() {
 }
 
 // 🧮 Contadores globales
-global.mallyUpdates = global.mallyUpdates || 0
-global.mallyMessages = global.mallyMessages || 0
+global.mallyUpdates = global.mallyUpdates || 0   // Siempre fijo
+global.mallyMessages = global.mallyMessages || 0 // Aumenta por cada mensaje
 
 // 💻 Handler principal
 let handler = async (m, { conn, args }) => {
   try {
-    // 🔹 Sincronizar contadores para que siempre sean iguales
-    const contadorGlobal = Math.max(global.mallyUpdates, global.mallyMessages)
-    global.mallyUpdates = contadorGlobal
-    global.mallyMessages = contadorGlobal
+    // 🌸 Aumentar contador de mensajes
+    global.mallyMessages++
 
-    // 🌸 Mensaje inicial bonito con contador
+    // Mensaje inicial bonito con contador
     const initMessage = `
 ╭┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄┄┄
        ⏳ *Buscando actualizaciones...* ⏳
 ╰┄┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄
 
-💬 *Mensajes procesados:* ${contadorGlobal}
-🧮 *Total de actualizaciones:* ${contadorGlobal}
+💬 *Mensajes procesados:* ${global.mallyMessages}
+🧮 *Total de actualizaciones:* ${global.mallyUpdates}
 
 🌸 Mally Bot está trabajando para ti 🌸
 `
@@ -60,16 +58,16 @@ let handler = async (m, { conn, args }) => {
       response = `
 ✅ *Mally Bot* ya está completamente actualizada 🌸
 
-💬 *Mensajes procesados:* ${contadorGlobal}
-🧮 *Total de actualizaciones:* ${contadorGlobal}
+💬 *Mensajes procesados:* ${global.mallyMessages}
+🧮 *Total de actualizaciones:* ${global.mallyUpdates}
 
 ✨ Todo está al día y funcionando a la perfección 💖
 `
     } 
     // 🌟 Caso 2: Se aplicaron actualizaciones
     else {
-      global.mallyUpdates = contadorGlobal + 1
-      global.mallyMessages = contadorGlobal + 1
+      global.mallyUpdates++ // Aumenta solo al aplicar update
+      global.mallyMessages++ // Subir también mensajes procesados por el mensaje final
 
       const changed = []
       const lines = output.split(/\r?\n/)
@@ -102,7 +100,7 @@ ${list}
 
     const fkontak = await makeFkontak().catch(() => null)
 
-    // 📤 Enviar resultado solo al chat o grupo donde esté el dueño
+    // 📤 Enviar resultado solo al chat/grupo donde esté el dueño
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
   } catch (error) {

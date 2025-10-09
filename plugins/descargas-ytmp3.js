@@ -1,86 +1,108 @@
+// 📁 plugins/Descargas-ytmp3.js
+// 🌸 Adaptado y optimizado para Itsuki-IA 💕
+
 import fetch from "node-fetch"
 
-let handler = async (m, { conn, args }) => {
-  if (!args[0]) return m.reply(`🌸 Ingresa un link de YouTube\n\n📌 Ejemplo: .ytmp3 https://youtu.be/xxxxx`)
+const handler = async (m, { conn, args }) => {
+  if (!args[0])
+    return m.reply(`🌸 *Ingresa un link de YouTube*  
+\n📌 *Ejemplo:*  
+> .ytmp3 https://youtu.be/xxxxxx`)
 
   const urlVideo = args[0].trim()
+  await conn.sendMessage(m.chat, { react: { text: "⏳", key: m.key } })
+
+  let downloadUrl = null
+  let source = "❌ Ninguna"
 
   try {
-    await conn.sendMessage(m.chat, { react: { text: "⏳", key: m.key } })
-
-    let res, data, downloadUrl
-
-    // 🌸 Intento 1: API Zenkey
+    // 🌀 1️⃣ API Zenkey (Principal)
     try {
-      res = await fetch(`https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(urlVideo)}`)
-      data = await res.json()
+      const res = await fetch(
+        `https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(urlVideo)}`
+      )
+      const data = await res.json()
       downloadUrl =
         data.result?.download_url ||
         data.result?.url ||
         data.result?.audio ||
         data.url ||
         null
-
-      if (downloadUrl) console.log("✅ Usando API principal (Zenkey)")
-    } catch (e) {
-      console.warn("⚠️ Error con API principal:", e)
+      if (downloadUrl) source = "✅ Zenkey"
+    } catch (err) {
+      console.warn("⚠️ Zenkey falló:", err.message)
     }
 
-    // 🌸 Intento 2: API de respaldo (Adonix)
+    // 🌀 2️⃣ API Adonix (Respaldo)
     if (!downloadUrl) {
       try {
-        res = await fetch(`https://apiadonix.kozow.com/download/ytmp3?apikey=${global.apikey || 'adonixfree'}&url=${encodeURIComponent(urlVideo)}`)
-        data = await res.json()
+        const res = await fetch(
+          `https://apiadonix.kozow.com/download/ytmp3?apikey=${global.apikey || "adonixfree"}&url=${encodeURIComponent(urlVideo)}`
+        )
+        const data = await res.json()
         downloadUrl =
           data.result?.download_url ||
           data.result?.audio ||
           data.url ||
           data.link ||
           null
-        if (downloadUrl) console.log("✅ Usando API de respaldo (Adonix)")
-      } catch (e) {
-        console.warn("⚠️ Error con API de respaldo:", e)
+        if (downloadUrl) source = "✅ Adonix"
+      } catch (err) {
+        console.warn("⚠️ Adonix falló:", err.message)
       }
     }
 
-    // 🌸 Intento 3: API alterna (Ytdl by Violetics)
+    // 🌀 3️⃣ API Violetics (Alternativa)
     if (!downloadUrl) {
       try {
-        res = await fetch(`https://violetics.pw/api/downloader/ytmp3?apikey=beta&url=${encodeURIComponent(urlVideo)}`)
-        data = await res.json()
+        const res = await fetch(
+          `https://violetics.pw/api/downloader/ytmp3?apikey=beta&url=${encodeURIComponent(urlVideo)}`
+        )
+        const data = await res.json()
         downloadUrl = data.result?.link || data.result?.audio || null
-        if (downloadUrl) console.log("✅ Usando API alternativa (Violetics)")
-      } catch (e) {
-        console.warn("⚠️ Error con API alternativa:", e)
+        if (downloadUrl) source = "✅ Violetics"
+      } catch (err) {
+        console.warn("⚠️ Violetics falló:", err.message)
       }
     }
 
-    // ❌ Ninguna funcionó
-    if (!downloadUrl) return m.reply("🥲 No se pudo enviar el audio desde ninguna API. Intenta con otro enlace o más tarde.")
+    // ❌ Si ninguna API devolvió resultado
+    if (!downloadUrl)
+      return m.reply("🥲 No se pudo descargar el audio desde ninguna API. Intenta con otro enlace o más tarde.")
 
-    // ✅ Descargar y enviar el audio
-    const fileResp = await fetch(downloadUrl)
-    const buffer = Buffer.from(await fileResp.arrayBuffer())
+    console.log(`[INFO] Descarga desde: ${source}`)
+
+    // 📦 Descarga y verificación
+    const response = await fetch(downloadUrl)
+    if (!response.ok) throw new Error(`Fallo al descargar: ${response.statusText}`)
+
+    const contentType = response.headers.get("content-type") || ""
+    if (!contentType.includes("audio") && !contentType.includes("mpeg")) {
+      console.warn("⚠️ Tipo MIME inesperado:", contentType)
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer())
 
     await conn.sendMessage(
       m.chat,
       {
         audio: buffer,
         mimetype: "audio/mpeg",
-        fileName: `ytmp3_${Date.now()}.mp3`
+        fileName: `ytmp3_${Date.now()}.mp3`,
+        caption: `🎵 *Descarga completada con éxito*\n> Fuente: ${source}`
       },
       { quoted: m }
     )
 
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
-
-  } catch (e) {
-    console.error("❌ Error en ytmp3 handler:", e)
-    m.reply("❌ Error al descargar el audio. Intenta con otro link.")
+  } catch (err) {
+    console.error("❌ Error en ytmp3 handler:", err)
+    m.reply("💥 Ocurrió un error al procesar tu solicitud. Intenta con otro link o más tarde.")
+    await conn.sendMessage(m.chat, { react: { text: "❎", key: m.key } })
   }
 }
 
-handler.command = ['ytmp3']
+handler.command = ["ytmp3"]
 handler.help = ["ytmp3 <link>"]
 handler.tags = ["descargas"]
 

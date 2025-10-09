@@ -8,6 +8,11 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
   if (!text) return conn.reply(m.chat, `❌ Usa: ${usedPrefix}${command} [enlace]`, m)
 
   try {
+    // Borra el mensaje original con enlace
+    if (m.key && m.key.id) {
+      await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.key.id } })
+    }
+
     if (command.toLowerCase() === 'tiktok' || /tiktok\.com/i.test(text)) {
       await m.react('🕒')
       const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}&hd=1`)

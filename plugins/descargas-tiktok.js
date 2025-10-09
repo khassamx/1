@@ -1,121 +1,70 @@
-// 📁 plugins/Descargas.tiktok.js
-// 🌸 Adaptado con amor para Itsuki-IA 💕
+// 📁 plugins/Descargas.social.js
+// 🌸 TikTok + Instagram con comandos y auto-detección
 
 import axios from 'axios'
+import dyluxApi from 'api-dylux'
 
-const handler = async (m, { conn, text, usedPrefix }) => {
-  if (!text) {
-    return conn.reply(
-      m.chat,
-      `🌸 *¿Y qué quieres que busque en TikTok sin decirme nada?*  
-Dame un enlace o escribe algo lindo, baka~ 💗`,
-      m
-    )
-  }
-
-  const isUrl = /(?:https?:\/\/)?(?:www\.|vm\.|vt\.|t\.)?tiktok\.com\/([^\s&]+)/i.test(text)
+const handler = async (m, { conn, text, usedPrefix, command }) => {
+  if (!text) return conn.reply(m.chat, `❌ Usa: ${usedPrefix}${command} [enlace]`, m)
 
   try {
-    await m.react('🕒')
-
-    if (isUrl) {
-      // ▸ Descarga directa por enlace
-      const res = await axios.get(
-        `https://www.tikwm.com/api/?url=${encodeURIComponent(text)}&hd=1`
-      )
+    if (command.toLowerCase() === 'tiktok' || /tiktok\.com/i.test(text)) {
+      await m.react('🕒')
+      const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}&hd=1`)
       const data = res.data?.data
-      if (!data?.play) return conn.reply(m.chat, 'ꕥ Enlace inválido o sin contenido descargable.', m)
-
-      const { title, duration, author, created_at, type, images, music, play } = data
-      const caption = createCaption(title, author, duration, created_at)
-
-      if (type === 'image' && Array.isArray(images)) {
-        // Envío de álbum o imágenes
-        for (const url of images.slice(0, 10)) {
-          await conn.sendMessage(m.chat, { image: { url }, caption }, { quoted: m })
+      if (!data?.play) return conn.reply(m.chat, '❌ Enlace TikTok inválido.', m)
+      const caption = createTikTokCaption(data)
+      if (data.type === 'image' && Array.isArray(data.images)) {
+        for (const img of data.images.slice(0, 10)) {
+          await conn.sendMessage(m.chat, { image: { url: img }, caption }, { quoted: m })
         }
-
-        if (music) {
+        if (data.music) {
           await conn.sendMessage(
             m.chat,
-            {
-              audio: { url: music },
-              mimetype: 'audio/mp4',
-              fileName: 'tiktok_audio.mp4'
-            },
+            { audio: { url: data.music }, mimetype: 'audio/mp4', fileName: 'tiktok_audio.mp4' },
             { quoted: m }
           )
         }
       } else {
-        // Envío de video
-        await conn.sendMessage(
-          m.chat,
-          { video: { url: play }, caption },
-          { quoted: m }
-        )
+        await conn.sendMessage(m.chat, { video: { url: data.play }, caption }, { quoted: m })
       }
+      await m.react('✅')
+
+    } else if (command.toLowerCase() === 'ig' || /instagram\.com/i.test(text)) {
+      await m.react('🕒')
+      const res = await dyluxApi.igdl(text)
+      if (!res || (Array.isArray(res) && res.length === 0)) return conn.reply(m.chat, '❌ Enlace Instagram inválido.', m)
+      const mediaList = Array.isArray(res) ? res : [res]
+      for (let i = 0; i < mediaList.length; i++) {
+        const media = mediaList[i]
+        const isVideo = media.type === 'video'
+        const mediaKey = isVideo ? 'video' : 'image'
+        const caption = mediaList.length > 1
+          ? `🔥 Carrusel: elemento ${i + 1} de ${mediaList.length}`
+          : `✅ Descarga completada.`
+        await conn.sendMessage(m.chat, { [mediaKey]: { url: media.url }, caption, mimetype: isVideo ? 'video/mp4' : 'image/jpeg' }, { quoted: m })
+        if (mediaList.length > 1) await new Promise(r => setTimeout(r, 1000))
+      }
+      await m.react('✅')
     } else {
-      // ▸ Búsqueda por texto
-      const res = await axios.post(
-        'https://tikwm.com/api/feed/search',
-        new URLSearchParams({ keywords: text, count: 20, cursor: 0, HD: 1 }),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'User-Agent':
-              'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36'
-          }
-        }
-      )
-
-      const results = res.data?.data?.videos?.filter(v => v.play) || []
-      if (results.length === 0)
-        return conn.reply(m.chat, 'ꕥ No encontré videos para eso, intenta con otras palabras 💭', m)
-
-      for (const v of results.slice(0, 5)) {
-        const caption = createSearchCaption(v)
-        await conn.sendMessage(m.chat, { video: { url: v.play }, caption }, { quoted: m })
-      }
+      conn.reply(m.chat, '❌ Enlace no soportado.', m)
     }
-
-    await m.react('✅')
   } catch (e) {
-    await m.react('❎')
-    await conn.reply(
-      m.chat,
-      `😵‍💫 *Oops, algo salió mal...*\n💕 Usa *${usedPrefix}report* si quieres informarlo.\n\n${e.message}`,
-      m
-    )
+    console.error('❌ Error Descargas.social:', e)
+    await conn.react(m.chat, '❎')
+    await conn.reply(m.chat, `⚠️ Error al procesar: ${e.message}`, m)
   }
 }
 
-// ▸ Funciones auxiliares
-function createCaption(title, author, duration, created_at = '') {
-  const name = author?.nickname || author?.unique_id || 'Desconocido'
-  const uid = author?.unique_id || 'unknown'
-  return (
-    `🦋 *Título ›* \`${title || 'No disponible'}\`\n` +
-    `> 👑 Autor › *${name}*\n` +
-    `> ⏳ Duración › *${duration || 'No disponible'}s*` +
-    `${created_at ? `\n> 📆 Creado » ${created_at}` : ''}\n` +
-    `> 🎶 Música » [${name}] original sound - ${uid}`
-  )
+// Funciones auxiliares
+function createTikTokCaption(data) {
+  const name = data.author?.nickname || data.author?.unique_id || 'Desconocido'
+  const uid = data.author?.unique_id || 'unknown'
+  return `🦋 *Título ›* \`${data.title || 'No disponible'}\`\n> 👑 Autor › *${name}*\n> ⏳ Duración › *${data.duration || 'No disponible'}s*\n> 🎶 Música › [${name}] original sound - ${uid}`
 }
 
-function createSearchCaption(data) {
-  const name = data.author?.nickname || 'Desconocido'
-  const uid = data.author?.unique_id ? `@${data.author.unique_id}` : ''
-  return (
-    `❀ *Título ›* ${data.title || 'No disponible'}\n\n` +
-    `☕︎ *Autor ›* ${name} ${uid}\n` +
-    `✧︎ *Duración ›* ${data.duration || 'No disponible'}s\n` +
-    `𝅘𝅥𝅮 *Música ›* ${data.music?.title || `[${name}] original sound - ${data.author?.unique_id || 'unknown'}`}`
-  )
-}
-
-handler.help = ['tiktok', 'tt']
+handler.help = ['tiktok', 'tt', 'ig']
 handler.tags = ['downloader']
-handler.command = ['tiktok', 'tt', 'tiktoks', 'tts']
-handler.group = true
-
+handler.command = ['tiktok','tt','ig']
+handler.all = true // Auto-detección de enlaces en cualquier mensaje
 export default handler

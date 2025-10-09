@@ -59,8 +59,8 @@ let handler = async (m, { conn }) => {
 
     // Botones para activar/desactivar AntiLink
     let buttons = [
-      { buttonId: '.antilink on', buttonText: { displayText: '✅ Activar AntiLink' }, type: 1 },
-      { buttonId: '.antilink off', buttonText: { displayText: '❌ Desactivar AntiLink' }, type: 1 },
+      { buttonId: '.antilink on', buttonText: { displayText: '.antilink on' }, type: 1 },
+      { buttonId: '.antilink off', buttonText: { displayText: '.antilink off' }, type: 1 },
       { buttonId: '.menu', buttonText: { displayText: '🔄 Actualizar Menú' }, type: 1 }
     ]
 

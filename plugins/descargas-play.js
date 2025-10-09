@@ -1,16 +1,24 @@
+// 🔹 plugins/Descargas.play.js
 import 'dotenv/config'
 import fetch from 'node-fetch'
 import ytdl from 'ytdl-core'
 
 const YT_API_KEY = process.env.YOUTUBE_API_KEY
-let tempStorage = {}
+if (!YT_API_KEY) console.warn('⚠️ No se encontró la variable YOUTUBE_API_KEY en .env')
 
-// Función de búsqueda en YouTube usando API Key
+/* ================================
+   🔍 FUNCIÓN: Buscar en YouTube
+================================ */
 async function searchYouTube(query) {
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&key=${YT_API_KEY}&maxResults=1`
+  if (!YT_API_KEY) throw new Error('API Key no configurada')
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(
+    query
+  )}&key=${YT_API_KEY}&maxResults=1`
   const res = await fetch(url)
+  if (!res.ok) throw new Error('Error en la solicitud a la API de YouTube')
   const data = await res.json()
   if (!data.items || data.items.length === 0) throw new Error('No se encontraron resultados')
+
   const video = data.items[0]
   return {
     title: video.snippet.title,
@@ -20,20 +28,19 @@ async function searchYouTube(query) {
   }
 }
 
-// Handler principal
+/* ================================
+   🎵 COMANDO: !play
+================================ */
 const handler = async (m, { conn, text, usedPrefix }) => {
-  if (!text) return conn.reply(m.chat, `Usa: ${usedPrefix}play <nombre del audio>`, m)
+  if (!text)
+    return conn.reply(m.chat, `⚠️ Usa: *${usedPrefix}play <nombre del audio>*`, m)
 
   try {
     const video = await searchYouTube(text)
-    tempStorage[m.sender] = { url: video.url, title: video.title }
-
     const caption = `
-🎵 *Audio:* ${video.title}
-👤 *Autor:* ${video.channel}
+🎶 *${video.title}*
+👤 *Canal:* ${video.channel}
 🔗 *Link:* ${video.url}
-
-Presiona 🎶 para descargar.
 `.trim()
 
     await conn.sendMessage(
@@ -43,7 +50,11 @@ Presiona 🎶 para descargar.
         caption,
         footer: '🌸 Mally Bot • Audio Only',
         buttons: [
-          { buttonId: `.ytmp3 ${video.url}`, buttonText: { displayText: '🎶 Descargar Audio' }, type: 1 }
+          {
+            buttonId: JSON.stringify({ cmd: 'ytmp3', url: video.url }),
+            buttonText: { displayText: '🎧 Descargar Audio' },
+            type: 1
+          }
         ],
         headerType: 4
       },
@@ -55,23 +66,49 @@ Presiona 🎶 para descargar.
   }
 }
 
-// ======= Botón de descarga de audio =======
+/* ================================
+   ⬇️ BOTÓN: Descargar MP3
+================================ */
 const ytmp3Handler = async (m, { conn, args }) => {
-  const url = args[0]
-  if (!url) return conn.reply(m.chat, '❌ URL no proporcionada', m)
+  let url
+
+  // Botón con JSON
+  if (typeof m?.msg?.selectedButtonId === 'string') {
+    try {
+      const data = JSON.parse(m.msg.selectedButtonId)
+      if (data.cmd === 'ytmp3') url = data.url
+    } catch {}
+  }
+
+  // Argumento directo
+  if (!url && args.length > 0) url = args[0]
+  if (!url) return conn.reply(m.chat, '❌ No se encontró ningún enlace válido.', m)
+
   try {
+    if (!ytdl.validateURL(url)) throw new Error('URL no válida de YouTube')
+
     const info = await ytdl.getInfo(url)
-    const audioFormat = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' })
-    await conn.sendMessage(m.chat, { audio: { url: audioFormat.url }, mimetype: 'audio/mpeg' }, { quoted: m })
+    const format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' })
+
+    // Validación de tamaño (evita archivos enormes)
+    const contentLength = parseInt(format.contentLength || '0', 10)
+    const fileSizeMB = contentLength / (1024 * 1024)
+    if (fileSizeMB > 40)
+      return conn.reply(m.chat, `⚠️ El archivo es demasiado grande (${fileSizeMB.toFixed(1)} MB)`, m)
+
+    await conn.sendMessage(m.chat, {
+      audio: { url: format.url },
+      mimetype: 'audio/mpeg',
+      fileName: `${info.videoDetails.title}.mp3`
+    }, { quoted: m })
+
   } catch (e) {
     console.error(e)
-    await conn.reply(m.chat, '❌ Error al descargar el audio', m)
+    await conn.reply(m.chat, '❌ Error al descargar el audio.', m)
   }
 }
 
-ytmp3Handler.command = /^ytmp3$/i
-
 handler.command = /^play$/i
-handler.register = true
+ytmp3Handler.command = /^ytmp3$/i
 export default handler
 export { ytmp3Handler }

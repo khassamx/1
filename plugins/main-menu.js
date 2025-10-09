@@ -1,37 +1,30 @@
-// 🦉 Menú DELUXE TITAN de MALLY BOT
-// Creado por Khassam | Developer: Brayan OFC
-
 import fetch from 'node-fetch'
 
 const botname = '🦉 MALLY🦉'
 const creador = 'KHASSAM'
 const developer = 'BRAYAN OFC'
 const version = '1.0.0'
-const rcanalw = 'https://t.me/TuCanalOficial' // <- aquí agregas el canal
+const rcanalw = 'https://t.me/TuCanalOficial'
 
-let handler = async (m, { conn, usedPrefix: _p }) => {
+let handler = async (m, { conn }) => {
   try {
-    // Inicializar base de datos si no existe
     if (!global.db) global.db = {}
     if (!global.db.data) global.db.data = {}
     if (!global.db.data.users) global.db.data.users = {}
     if (!global.db.data.global) global.db.data.global = { totalMessages: 0 }
+    if (!global.db.data.chats) global.db.data.chats = {}
 
     let userId = m.mentionedJid?.[0] || m.sender
     let user = global.db.data.users[userId] || { exp: 0, level: 1, premium: false, msgCount: 0 }
+    let chat = global.db.data.chats[m.chat] || { antiLink: false }
     let uptime = clockString(process.uptime() * 1000)
 
-    // Calcular ping
-    let start = Date.now()
-    await conn.sendPresenceUpdate('composing', m.chat)
-    let ping = Date.now() - start
-
-    // Incrementar contador global y por usuario
     global.db.data.global.totalMessages += 1
     user.msgCount += 1
     global.db.data.users[userId] = user
+    global.db.data.chats[m.chat] = chat
 
-    // Menú estilo mini-poster deluxe para WhatsApp con canal
+    // Texto del menú
     let menuText = `
 🌸✨🔥 MALLY BOT 🔥✨🌸
 ===========================
@@ -40,20 +33,16 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 🛠️ Creador: ${creador}
 💻 Developer: ${developer}
 ⏱ Uptime: ${uptime}
-📶 Ping: ${ping}ms
+📶 Ping: calculando...
 🗨️ Chat global: ${global.db.data.global.totalMessages}
 ⭐ Nivel: ${user.level}
 💎 Premium: ${user.premium ? 'Sí' : 'No'}
-
-📊 ➤ CONTADOR GLOBAL ➤ 📊
-💛 Registra mensajes y acciones
-💚 Actualización completa solo en canal autorizado
 
 📋 🎨 MENÚ PRINCIPAL 🎨 📋
 ---------------------------------
 👥 *Grupos / Administración*
 💙 .kick @user
-💜 .antilink on/off
+💜 AntiLink: ${chat.antiLink ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
 
 🎵 *Descargas / Multimedia*
 💚 .play
@@ -66,14 +55,26 @@ let handler = async (m, { conn, usedPrefix: _p }) => {
 
 📺 *Canal Oficial*  
 💚 ${rcanalw}
-
-🦉 SUBBOT
-💚 .qr
-💖 .code
 `
 
-    // Enviar menú
-    await conn.sendMessage(m.chat, { text: menuText, contextInfo: { mentionedJid: [userId] } })
+    // Botones para activar/desactivar AntiLink
+    let buttons = [
+      { buttonId: '.antilink on', buttonText: { displayText: '✅ Activar AntiLink' }, type: 1 },
+      { buttonId: '.antilink off', buttonText: { displayText: '❌ Desactivar AntiLink' }, type: 1 },
+      { buttonId: '.menu', buttonText: { displayText: '🔄 Actualizar Menú' }, type: 1 }
+    ]
+
+    await conn.sendMessage(
+      m.chat,
+      {
+        text: menuText,
+        footer: `🌸 ${botname} • v${version}`,
+        buttons,
+        headerType: 1,
+        contextInfo: { mentionedJid: [userId] }
+      },
+      { quoted: m }
+    )
 
   } catch (e) {
     await conn.sendMessage(m.chat, { text: `❌ ERROR EN EL MENÚ:\n${e}` }, { quoted: m })

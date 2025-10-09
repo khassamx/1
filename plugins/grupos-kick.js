@@ -1,5 +1,9 @@
 let handler = async (m, { conn, usedPrefix, command }) => {
 
+global.creador = [
+ ['5216641784469', 'BrayanOFC-Li', true], 
+]
+
   // 🧩 Validación: debe etiquetar o responder a alguien
   if (!m.mentionedJid[0] && !m.quoted) 
     return m.reply(`🐉 Debes mencionar o responder al usuario que deseas expulsar.\n\n📌 Ejemplo:\n${usedPrefix + command} @usuario`)

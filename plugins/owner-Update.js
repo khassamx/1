@@ -7,14 +7,14 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const ROOT = path.resolve(__dirname, '..')
 
-// 🌐 Miniatura de contacto
+// 🌐 Miniatura de contacto estilo MIMI
 async function makeFkontak() {
   try {
     const res = await fetch('https://raw.githubusercontent.com/WillZek/Storage-CB2/main/images/d110942e81b3.jpg')
     const thumb2 = Buffer.from(await res.arrayBuffer())
     return {
-      key: { participants: '0@s.whatsapp.net', remoteJid: 'status@broadcast', fromMe: false, id: 'Mally-Update' },
-      message: { locationMessage: { name: '⚙️ Actualización del sistema', jpegThumbnail: thumb2 } },
+      key: { participants: '0@s.whatsapp.net', remoteJid: 'status@broadcast', fromMe: false, id: 'MIMI-Update' },
+      message: { locationMessage: { name: '⚙️ Actualización del sistema MIMI 🌸', jpegThumbnail: thumb2 } },
       participant: '0@s.whatsapp.net'
     }
   } catch {
@@ -23,25 +23,25 @@ async function makeFkontak() {
 }
 
 // 🧮 Contadores globales
-global.mallyUpdates = global.mallyUpdates || 0   // Siempre fijo
-global.mallyMessages = global.mallyMessages || 0 // Aumenta por cada mensaje
+global.mimiUpdates = global.mimiUpdates || 0
+global.mimiMessages = global.mimiMessages || 0
 
 // 💻 Handler principal
 let handler = async (m, { conn, args }) => {
   try {
     // 🌸 Aumentar contador de mensajes
-    global.mallyMessages++
+    global.mimiMessages++
 
-    // Mensaje inicial bonito con contador
+    // Mensaje inicial bonito
     const initMessage = `
-╭┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄┄┄
-       ⏳ *Buscando actualizaciones...* ⏳
-╰┄┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄
+╭───────────────────
+       ⏳ *MIMI está buscando actualizaciones...* 💜
+╰───────────────────
 
-💬 *Mensajes procesados:* ${global.mallyMessages}
-🧮 *Total de actualizaciones:* ${global.mallyUpdates}
+💬 *Mensajes procesados:* ${global.mimiMessages}
+🧮 *Total de actualizaciones:* ${global.mimiUpdates}
 
-🌸 Mally Bot está trabajando para ti 🌸
+🌸 Tu asistente idol está trabajando para ti 🎀
 `
     await conn.reply(m.chat, initMessage, m, rcanalw)
 
@@ -56,18 +56,18 @@ let handler = async (m, { conn, args }) => {
     // 🌸 Caso 1: Ya está actualizado
     if (isUpToDate) {
       response = `
-✅ *Mally Bot* ya está completamente actualizada 🌸
+✅ *MIMI ver. BTS* ya está completamente actualizada 🌸✨
 
-💬 *Mensajes procesados:* ${global.mallyMessages}
-🧮 *Total de actualizaciones:* ${global.mallyUpdates}
+💬 *Mensajes procesados:* ${global.mimiMessages}
+🧮 *Total de actualizaciones:* ${global.mimiUpdates}
 
-✨ Todo está al día y funcionando a la perfección 💖
+💖 Todo está al día y lista para brillar con energía idol 🎀
 `
     } 
     // 🌟 Caso 2: Se aplicaron actualizaciones
     else {
-      global.mallyUpdates++ // Aumenta solo al aplicar update
-      global.mallyMessages++ // Subir también mensajes procesados por el mensaje final
+      global.mimiUpdates++
+      global.mimiMessages++
 
       const changed = []
       const lines = output.split(/\r?\n/)
@@ -77,30 +77,29 @@ let handler = async (m, { conn, args }) => {
       }
 
       const banner = [
-        '╭┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄┄┄',
-        '       🌸 *Se han aplicado actualizaciones* 🌸',
-        '╰┄┄┄┄┄┄┄┄┄• • • ┄┄┄┄┄┄',
+        '╭───────────────────',
+        '       🌸 *Se han aplicado actualizaciones!* 🌸',
+        '╰───────────────────',
         '',
         '📂 *Archivos actualizados:*'
       ]
       const list = changed.slice(0, 10).map(f => `✅ ${f}`).join('\n') || '✅ Ningún archivo relevante'
 
       response = `
-🆙 *Mally Bot se actualizó correctamente* 🌸
+🆙 *MIMI ver. BTS se actualizó correctamente!* 🌸🎤
 
 ${banner.join('\n')}
 ${list}
 
-🧮 *Total de actualizaciones:* ${global.mallyUpdates}
-💬 *Mensajes procesados:* ${global.mallyMessages}
+🧮 *Total de actualizaciones:* ${global.mimiUpdates}
+💬 *Mensajes procesados:* ${global.mimiMessages}
 
-🚀 *Mally Bot ahora está lista para brillar aún más!* 💖
+💖 ¡Ahora MIMI está lista para brillar aún más y ayudarte! 🌸✨
 `
     }
 
     const fkontak = await makeFkontak().catch(() => null)
 
-    // 📤 Enviar resultado solo al chat/grupo donde esté el dueño
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
   } catch (error) {

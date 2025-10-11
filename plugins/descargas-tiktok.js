@@ -84,9 +84,8 @@ const uid = data.author?.unique_id || 'unknown'
 return 🦋 *Título ›* \${data.title || 'No disponible'}`\n> 👑 Autor › ${name}\n> ⏳ Duración › ${data.duration || 'No disponible'}s\n> 🎶 Música › [${name}] original sound - ${uid}`
 }
 
-handler.help = ['tiktok', '.m', 'ig']
+handler.help = ['tiktok', 'tt', 'ig']
 handler.tags = ['downloader']
 handler.command = ['tiktok','tt','ig']
 handler.all = true // Auto-detección de enlaces
 export default handler
-

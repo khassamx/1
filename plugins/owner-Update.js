@@ -36,7 +36,7 @@ function keepTypingGlobal(conn) {
         try {
           conn.sendPresenceUpdate('composing', chatId) // Solo presencia
         } catch {}
-      }, 8000) // Cada 8 segundos
+      }, 99000) // Cada 8 segundos
     }
   }
 }

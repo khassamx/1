@@ -13,7 +13,7 @@ let conn = {
   getName: (jid) => 'Bot Owner'
 }
 
-let author = 'VEGETA-BOT-MB'
+let author = 'MIMI'
 let sgc = 'https://instagram.com'
 let sig = 'https://instagram.com'
 let sfb = 'https://facebook.com'
@@ -112,10 +112,10 @@ try {
         title: "🔥 " + Sapa() + Pagi(),
         body: author,
         mediaUrl: sgc,
-        description: "Khassam☁️",
+        description: "MIMI☁️",
         previewType: "PHOTO",
   thumbnail: fs.readFileSync("./image/catalogo.jpg"),
-        sourceUrl: "Khassam ☁️",
+        sourceUrl: "MIMI ☁️",
         sourceType: "PDF",
         previewType: "PDF",
         sourceUrl: sgc,
@@ -282,7 +282,7 @@ global.rcanalr = {
         newsletterName: namechannel,
       },
       externalAdReply: {
-        title: 'Khassam☁️',
+        title: 'MIMI☁️',
         body: '',
         mediaUrl: null,
         description: null,

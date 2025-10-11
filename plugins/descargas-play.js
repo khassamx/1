@@ -1,117 +1,91 @@
 // 🌸 plugins/auto-escribiendo-y-rechazo.js
-// Mantiene "escribiendo..." activo en todos los chats donde haya actividad
-// y rechaza automáticamente las llamadas entrantes
+// ✅ Hace que el bot parezca estar escribiendo siempre en chats activos
+// ✅ Detecta y rechaza llamadas automáticamente
+// ✅ Compatible con Baileys (MD o multi-device)
 
 let handler = async (m, { conn }) => {
   try {
-    // --- SISTEMA DE AUTO ESCRIBIENDO ---
+    // --- SISTEMA DE AUTO "ESCRIBIENDO" ---
     if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
+
+    // Añadimos el chat activo donde haya actividad (mensaje, mención, etc.)
     global.autoEscribiendo.add(m.chat);
 
-    // Evita crear más de un bucle global
+    // Si el loop no existe, crearlo
     if (!global.autoEscribiendoLoop) {
       global.autoEscribiendoLoop = true;
 
       setInterval(async () => {
         for (let chat of global.autoEscribiendo) {
           try {
-            // Finge estar escribiendo
+            // Envía "escribiendo..."
             await conn.sendPresenceUpdate('composing', chat);
-            // Espera entre 2 y 5 segundos para hacerlo natural
+            // Espera aleatoria (2-5 segundos)
             await new Promise(res => setTimeout(res, Math.floor(Math.random() * 3000) + 2000));
-            // Luego cambia a "en línea"
+            // Luego "en línea"
             await conn.sendPresenceUpdate('available', chat);
           } catch (e) {
-            console.error("❌ Error enviando presencia en:", chat, e);
+            console.error('❌ Error en presencia de', chat, e);
             global.autoEscribiendo.delete(chat);
           }
         }
-      }, 6000); // cada 6 segundos actualiza los estados
+      }, 6000); // cada 6 segundos actualiza presencia
     }
 
   } catch (e) {
-    console.error("❌ Error en auto-escribiendo:", e);
+    console.error('❌ Error en auto-escribiendo:', e);
   }
 };
 
-// Se ejecuta automáticamente con cualquier mensaje
-handler.all = true;
+// ✅ Este handler se ejecuta con cualquier mensaje (sin comandos)
+handler.all = async function (m) {
+  await this.sendPresenceUpdate('composing', m.chat).catch(() => {});
+  if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
+  global.autoEscribiendo.add(m.chat);
+};
 
-export default handler;
+// =============================================================
+// 📞 SISTEMA DE DETECCIÓN Y RECHAZO DE LLAMADAS
+// =============================================================
 
-// ===================================================================
-// 📞 SISTEMA DE DETECCIÓN Y RECHAZO DE LLAMADAS AUTOMÁTICO
-// ===================================================================
-
-function setupCallRejection(conn) {
+handler.before = async function (m, { conn }) {
   try {
-    // Opción 1: evento 'call' (versiones modernas de Baileys)
-    if (typeof conn.on === 'function') {
-      conn.on('call', async (call) => {
+    // En versiones recientes, los eventos de llamadas vienen en conn.ev.on
+    if (!conn.callListenerAdded) {
+      conn.callListenerAdded = true;
+
+      conn.ev.on('call', async (call) => {
         try {
           const from = call?.from || call?.[0]?.from || call?.[0]?.participant;
           if (!from) return;
+          console.log('📞 Llamada detectada de:', from);
 
-          console.log('📞 Llamada entrante de:', from);
-
+          // Intento de rechazar la llamada
           if (typeof conn.rejectCall === 'function') {
             await conn.rejectCall(from);
-            console.log('❌ Llamada rechazada automáticamente:', from);
+            console.log('❌ Llamada rechazada automáticamente.');
           } else {
-            // Método genérico si no existe rejectCall
-            await conn.sendPresenceUpdate('unavailable', from).catch(() => {});
-            console.log('⚠️ Rechazo genérico (sin rejectCall disponible).');
+            // Método alternativo si rejectCall no está disponible
+            await conn.sendPresenceUpdate('unavailable', from);
+            console.log('⚠️ Método alternativo: presencia "unavailable".');
           }
 
-          // Opcional: Aviso al remitente (puedes comentar si no querés)
-          try {
-            await conn.sendMessage(from, {
-              text: '🚫 Las llamadas están desactivadas. Por favor, enviá un mensaje escrito.'
-            });
-          } catch {}
+          // Opcional: enviar aviso al usuario
+          await conn.sendMessage(from, {
+            text: '🚫 Las llamadas están desactivadas. Enviá tu mensaje escrito por favor.'
+          }).catch(() => {});
 
         } catch (e) {
-          console.error('Error gestionando llamada entrante:', e);
+          console.error('Error gestionando llamada:', e);
         }
       });
+
+      console.log('✅ Sistema de rechazo de llamadas activado.');
     }
 
-    // Opción 2: versiones que usan 'CB:call' (eventos crudos)
-    if (conn?.ws?.on) {
-      conn.ws.on('CB:call', async (json) => {
-        try {
-          const from = json?.[1]?.attrs?.from || json?.attrs?.from;
-          if (!from) return;
-
-          console.log('📞 Llamada detectada vía CB:call de:', from);
-
-          if (typeof conn.rejectCall === 'function') {
-            await conn.rejectCall(from);
-            console.log('❌ Llamada rechazada (CB):', from);
-          } else {
-            await conn.sendPresenceUpdate('unavailable', from).catch(() => {});
-          }
-
-          // Aviso opcional al usuario
-          try {
-            await conn.sendMessage(from, {
-              text: '📵 No se aceptan llamadas, enviá tu mensaje por chat.'
-            });
-          } catch {}
-
-        } catch (e) {
-          console.error('Error procesando CB:call:', e);
-        }
-      });
-    }
-
-    console.log('✅ Sistema de rechazo de llamadas activado correctamente.');
   } catch (e) {
     console.error('❌ Error inicializando rechazo de llamadas:', e);
   }
-}
+};
 
-// Auto inicializar cuando el bot arranca
-setTimeout(() => {
-  if (global.conn) setupCallRejection(global.conn);
-}, 5000);
+export default handler;

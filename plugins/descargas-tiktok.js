@@ -10,7 +10,7 @@ import fs from 'fs'
 // ⚡ Configura tus credenciales en .env
 const igClient = new Instagram({
   username: bot1mimi2,
-  password: q?pZ-pdYk595a:*
+  password: q?pZ-pdYk595a:*,
 })
 
 // ⚡ Login automático al iniciar

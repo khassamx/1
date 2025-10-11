@@ -29,7 +29,7 @@ global.metanombre = 'Meta AO'
 let idchannel = '120363404313458099@newsletter'
 let namechannel = 'Kassam'
 let iconorest = 'https://files.catbox.moe/2v7j6r.jpg'
-let icono = 'https://files.catbox.moe/tze2i9.jpg'
+let icono = 'https://files.catbox.moe/2n02i7.jpg'
 let iconoden = 'https://files.catbox.moe/nhn6ac.jpg'
 let iconodev = 'https://files.catbox.moe/8bk08z.jpg' 
 

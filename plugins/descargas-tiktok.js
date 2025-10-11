@@ -1,6 +1,6 @@
 // 📁 plugins/MIMI-Social.js
-// 💜 MIMI ver. BTS — Descargador TikTok, Instagram, Facebook y X (Twitter) con estilo idol 🌸🎤
-// ✨ Creado por KekoOfficial y mejorado con GPT-5 💫
+// 💜 MIMI ver. BTS — Descargador TikTok, Instagram, Facebook y X (Twitter)
+// 🌸 Estilo Idol, Elegancia y Potencia — Creado por KekoOfficial + GPT-5 💫
 
 import axios from 'axios'
 import dyluxApi from 'api-dylux'
@@ -9,68 +9,89 @@ const handler = async (m, { conn, text }) => {
   if (!text) return conn.reply(m.chat, '📎 Oppa~ envíame un enlace válido de TikTok, Instagram, Facebook o X 💜', m)
 
   try {
-    // 🧹 Borra el mensaje original con enlace
-    if (m.key?.id) await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.key.id } })
+    // 🧹 Elimina el mensaje original con el enlace
+    if (m.key?.id)
+      await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.key.id } })
 
-    // ⏳ Mensaje temporal de procesamiento
-    const processingMsg = await conn.sendMessage(m.chat, { text: '💫 MIMI está trabajando en tu video~ espera un poquito oppa 💜' }, { quoted: m })
+    // 💫 Mensaje de procesamiento con efecto typing
+    const processingMsg = await conn.sendMessage(m.chat, { text: '💫 MIMI está preparando tu descarga~ 💜' }, { quoted: m })
     const typing = setInterval(() => conn.sendPresenceUpdate('composing', m.chat), 2000)
 
     let matched = false
 
-    // 🔹 TikTok
+    // 🔹 TIKTOK — API oficial estable (tikwm)
     if (/tiktok\.com/i.test(text)) {
       matched = true
-      const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}&hd=1`)
-      const data = res.data?.data
-      if (!data?.play) throw new Error('TikTok inválido 💔')
+      const { data } = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}&hd=1`)
+      if (!data?.data?.play) throw new Error('No se pudo procesar el TikTok 💔')
 
-      const caption = `🎶 Video de ${data.author?.nickname || 'Desconocido'} descargado por MIMI ver. BTS 🌸`
-      await conn.sendMessage(m.chat, { video: { url: data.play }, caption }, { quoted: m })
+      const info = data.data
+      const caption = `🎶 Video de ${info.author?.nickname || 'Desconocido'} descargado por MIMI ver. BTS 🌸`
+      await conn.sendMessage(m.chat, { video: { url: info.play }, caption }, { quoted: m })
     }
 
-    // 🔹 Instagram (usando API de respaldo)
+    // 🔹 INSTAGRAM — Nueva API (Ryzendesu, con fallback)
     else if (/instagram\.com/i.test(text)) {
       matched = true
-      const { data } = await axios.get(`https://api.lolhuman.xyz/api/instagram?apikey=demo&url=${encodeURIComponent(text)}`)
-      if (!data?.result) throw new Error('Instagram no disponible 💜')
 
-      for (const media of data.result) {
-        if (media.includes('.mp4')) {
-          await conn.sendMessage(m.chat, { video: { url: media }, caption: '💜 Video descargado por MIMI ver. BTS' }, { quoted: m })
-        } else {
-          await conn.sendMessage(m.chat, { image: { url: media }, caption: '🌸 Imagen descargada por MIMI ver. BTS' }, { quoted: m })
-        }
+      let mediaList = []
+      try {
+        const { data } = await axios.get(`https://api.ryzendesu.vip/api/downloader/igdl?url=${encodeURIComponent(text)}`)
+        if (data?.result?.length) mediaList = data.result
+      } catch (err) {
+        console.log("⚠️ API Ryzendesu falló, usando respaldo...")
+      }
+
+      // 🔸 Fallback (saveig.app extractor)
+      if (mediaList.length === 0) {
+        const backup = await axios.post('https://saveig.app/api/ajaxSearch', new URLSearchParams({ q: text }))
+        const urls = backup.data?.data?.map?.(v => v.url) || []
+        mediaList = urls.map(url => ({ url, type: url.endsWith('.mp4') ? 'video' : 'image' }))
+      }
+
+      if (mediaList.length === 0) throw new Error('No se pudo obtener contenido de Instagram 💔')
+
+      for (const media of mediaList) {
+        const isVideo = media.type === 'video' || media.url.endsWith('.mp4')
+        const caption = isVideo
+          ? '🎥 Video descargado por MIMI ver. BTS 💜'
+          : '📸 Imagen descargada por MIMI ver. BTS 🌸'
+        await conn.sendMessage(m.chat, { [isVideo ? 'video' : 'image']: { url: media.url }, caption }, { quoted: m })
       }
     }
 
-    // 🔹 Facebook
+    // 🔹 FACEBOOK — API Dylux
     else if (/facebook\.com|fb\.watch/i.test(text)) {
       matched = true
       const res = await dyluxApi.fbdown(text)
-      if (!res?.url) throw new Error('Facebook inválido 💔')
-      await conn.sendMessage(m.chat, { video: { url: res.url }, caption: '📘 Video de Facebook descargado con amor por MIMI 💜' }, { quoted: m })
+      if (!res?.url) throw new Error('No se pudo descargar el video de Facebook 💔')
+      await conn.sendMessage(m.chat, { video: { url: res.url }, caption: '📘 Video descargado con amor por MIMI 💜' }, { quoted: m })
     }
 
-    // 🔹 X / Twitter
+    // 🔹 TWITTER / X — API Dylux
     else if (/twitter\.com|x\.com/i.test(text)) {
       matched = true
       const res = await dyluxApi.xdl(text)
-      if (!res?.url) throw new Error('Twitter inválido 💔')
+      if (!res?.url) throw new Error('No se pudo descargar el video de X 💔')
       await conn.sendMessage(m.chat, { video: { url: res.url }, caption: '🐦 Video de X (Twitter) descargado por MIMI 🎤' }, { quoted: m })
     }
 
+    // 🔹 SIN COINCIDENCIAS
     if (!matched) {
       await conn.reply(m.chat, '❌ Solo acepto enlaces de TikTok, Instagram, Facebook o X 💜', m)
     }
 
-    // 🔚 Limpieza
+    // 🔚 Limpieza final
     clearInterval(typing)
     if (processingMsg.key?.id)
       await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: true, id: processingMsg.key.id } })
   } catch (e) {
     console.error('⚠️ Error MIMI-Social:', e)
-    await conn.reply(m.chat, `⚠️ Oops~ algo falló 💜\nMIMI no pudo procesar tu enlace.\n\n📄 Error técnico: ${e.message}`, m)
+    await conn.reply(
+      m.chat,
+      `⚠️ Oops~ algo falló 💜\nMIMI no pudo procesar tu enlace.\n\n🧩 Detalle técnico: ${e.message}`,
+      m
+    )
   }
 }
 

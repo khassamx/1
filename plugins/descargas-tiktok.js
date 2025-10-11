@@ -1,12 +1,12 @@
-// 📁 plugins/Descargas.social.pro.js
-// 🌸 TikTok + Instagram + Facebook + X (Twitter) con autodetección y “escribiendo…” continuo
-// ✨ Creado por KekoOfficial y mejorado con GPT-5 💫
+// 📁 plugins/MIMI-Social.js
+// 💜 MIMI ver. BTS — Descargador TikTok, Instagram, Facebook y X (Twitter) con estilo idol 🌸🎤
+// ✨ Creado por KekoOfficial y mejorado con GPT-5-mini 💫
 
 import axios from 'axios'
 import dyluxApi from 'api-dylux'
 
 const handler = async (m, { conn, text, command }) => {
-  if (!text) return conn.reply(m.chat, '📎 Enviame un enlace válido de TikTok, Instagram, Facebook o X (Twitter).', m)
+  if (!text) return conn.reply(m.chat, '📎 Oppa~ envíame un enlace válido de TikTok, Instagram, Facebook o X (Twitter) 💜', m)
 
   try {
     // 🧹 Borra el mensaje original con enlace
@@ -14,10 +14,10 @@ const handler = async (m, { conn, text, command }) => {
       await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.key.id } })
     }
 
-    // ⏳ Enviando mensaje de procesamiento
+    // ⏳ Mensaje de procesamiento estilo MIMI
     const processingMsg = await conn.sendMessage(
       m.chat,
-      { text: '⏳ Procesando tu enlace... un momento, baka~ 💗' },
+      { text: '⏳ MIMI está procesando tu enlace kawaii~ 💗 un momento oppa~' },
       { quoted: m }
     )
 
@@ -31,7 +31,7 @@ const handler = async (m, { conn, text, command }) => {
       matched = true
       const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}&hd=1`)
       const data = res.data?.data
-      if (!data?.play) throw new Error('Enlace TikTok inválido.')
+      if (!data?.play) throw new Error('❌ Enlace TikTok inválido, oppa~')
       const caption = createTikTokCaption(data)
 
       if (data.type === 'image' && Array.isArray(data.images)) {
@@ -54,7 +54,7 @@ const handler = async (m, { conn, text, command }) => {
     else if (/instagram\.com/i.test(text)) {
       matched = true
       const res = await dyluxApi.igdl(text)
-      if (!res || (Array.isArray(res) && res.length === 0)) throw new Error('Enlace Instagram inválido.')
+      if (!res || (Array.isArray(res) && res.length === 0)) throw new Error('❌ Enlace Instagram inválido 💗')
 
       const mediaList = Array.isArray(res) ? res : [res]
       for (let i = 0; i < mediaList.length; i++) {
@@ -63,8 +63,8 @@ const handler = async (m, { conn, text, command }) => {
         const mediaKey = isVideo ? 'video' : 'image'
         const caption =
           mediaList.length > 1
-            ? `🔥 Carrusel ${i + 1} de ${mediaList.length}`
-            : `✅ Descarga completada.`
+            ? `🌸 Carrusel ${i + 1} de ${mediaList.length} descargado por MIMI 💜`
+            : `✅ Descarga completada por MIMI 🎀`
         await conn.sendMessage(
           m.chat,
           { [mediaKey]: { url: media.url }, caption, mimetype: isVideo ? 'video/mp4' : 'image/jpeg' },
@@ -78,10 +78,10 @@ const handler = async (m, { conn, text, command }) => {
     else if (/facebook\.com|fb\.watch/i.test(text)) {
       matched = true
       const res = await dyluxApi.fbdown(text)
-      if (!res?.url) throw new Error('Enlace Facebook inválido.')
+      if (!res?.url) throw new Error('❌ Enlace Facebook inválido 💜')
       await conn.sendMessage(
         m.chat,
-        { video: { url: res.url }, caption: '📘 Video de Facebook descargado correctamente ✅' },
+        { video: { url: res.url }, caption: '📘 Video de Facebook descargado exitosamente por MIMI 💗' },
         { quoted: m }
       )
     }
@@ -90,20 +90,20 @@ const handler = async (m, { conn, text, command }) => {
     else if (/twitter\.com|x\.com/i.test(text)) {
       matched = true
       const res = await dyluxApi.xdl(text)
-      if (!res || !res.url) throw new Error('Enlace X/Twitter inválido.')
+      if (!res || !res.url) throw new Error('❌ Enlace X/Twitter inválido 💜')
       const media = Array.isArray(res.url) ? res.url[0] : res.url
       await conn.sendMessage(
         m.chat,
-        { video: { url: media }, caption: '🐦 Video de X (Twitter) descargado exitosamente 💫' },
+        { video: { url: media }, caption: '🐦 Video de X (Twitter) descargado por MIMI ver. BTS 🎀' },
         { quoted: m }
       )
     }
 
     if (!matched) {
-      await conn.reply(m.chat, '❌ Enlace no reconocido. Solo TikTok, Instagram, Facebook o X (Twitter).', m)
+      await conn.reply(m.chat, '❌ Enlace no reconocido 💜 Solo TikTok, Instagram, Facebook o X (Twitter).', m)
     }
 
-    // 🧹 Detener “escribiendo…” y borrar el mensaje de “procesando”
+    // 🧹 Detener “escribiendo…” y borrar el mensaje de procesamiento
     clearInterval(typingInterval)
     if (processingMsg.key?.id) {
       await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: true, id: processingMsg.key.id } })
@@ -111,7 +111,7 @@ const handler = async (m, { conn, text, command }) => {
 
   } catch (e) {
     console.error('❌ Error Descargas.social.pro:', e)
-    await conn.reply(m.chat, `⚠️ Error al procesar: ${e.message}`, m)
+    await conn.reply(m.chat, `⚠️ Oops~ algo salió mal 💜\nMIMI no pudo procesar tu enlace.\nError: ${e.message}`, m)
   }
 }
 
@@ -119,15 +119,16 @@ const handler = async (m, { conn, text, command }) => {
 function createTikTokCaption(data) {
   const name = data.author?.nickname || data.author?.unique_id || 'Desconocido'
   const uid = data.author?.unique_id || 'unknown'
-  return `🦋 *Título ›* ${data.title || 'No disponible'}
-> 👑 Autor › ${name}
-> ⏳ Duración › ${data.duration || 'No disponible'}s
-> 🎶 Música › [${name}] original sound - ${uid}`
+  return `🦋 *Título:* ${data.title || 'No disponible'}
+> 👑 Autor: ${name}
+> ⏳ Duración: ${data.duration || 'No disponible'}s
+> 🎶 Música: [${name}] original sound - ${uid}
+💜 Descargado con amor por MIMI ver. BTS 🌸`
 }
 
 handler.help = ['tiktok', 'tt', 'ig', 'fb', 'x']
 handler.tags = ['downloader']
 handler.command = ['tiktok', 'tt', 'ig', 'fb', 'x']
-handler.all = true // Autodetección de enlaces
+handler.all = true // autodetección de enlaces
 
 export default handler

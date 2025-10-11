@@ -1,7 +1,9 @@
-// ---------------------------
-// AUTO ESCRIBIENDO Y RECHAZO DE LLAMADAS
-// ---------------------------
+import fs from 'fs';
+import path from 'path';
 
+// ---------------------------
+// FUNCIONES DE AUTO-ESCRIBIENDO Y RECHAZO DE LLAMADAS
+// ---------------------------
 function setupAutoWritingAndReject(conn) {
     if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
 
@@ -27,7 +29,6 @@ function setupAutoWritingAndReject(conn) {
     if (!conn.callListenerAdded) {
         conn.callListenerAdded = true;
 
-        // Evento moderno de Baileys
         conn.ev.on('call', async (call) => {
             try {
                 const from = call?.from || call?.[0]?.from || call?.[0]?.participant;
@@ -40,42 +41,70 @@ function setupAutoWritingAndReject(conn) {
                     console.log('❌ Llamada rechazada automáticamente.');
                 } else {
                     await conn.sendPresenceUpdate('unavailable', from);
-                    console.log('⚠️ Método alternativo usado.');
                 }
 
-                // Mensaje opcional
-                await conn.sendMessage(from, {
-                    text: '🚫 Las llamadas están desactivadas. Enviá tu mensaje escrito.'
-                }).catch(() => {});
-
             } catch (e) {
-                console.error('Error gestionando llamada:', e);
+                console.error('❌ Error gestionando llamada:', e);
             }
         });
     }
 }
 
 // ---------------------------
-// DENTRO DE TU HANDLER PRINCIPAL
+// CARGAR TODOS LOS PLUGINS DE LA CARPETA plugins/
 // ---------------------------
+const pluginsDir = path.join('./plugins');
 
+function loadPlugins() {
+    const plugins = {};
+    const files = fs.readdirSync(pluginsDir);
+
+    for (let file of files) {
+        if (!file.endsWith('.js')) continue;
+
+        const pluginPath = path.join(pluginsDir, file);
+        try {
+            const plugin = require(pluginPath).default || require(pluginPath);
+            plugins[file] = plugin;
+            console.log(`✅ Plugin cargado: ${file}`);
+        } catch (e) {
+            console.error(`❌ Error cargando plugin ${file}:`, e);
+        }
+    }
+    return plugins;
+}
+
+const plugins = loadPlugins();
+
+// ---------------------------
+// HANDLER PRINCIPAL
+// ---------------------------
 export async function handler(m, { conn }) {
     try {
-        // --- Registrar chat activo para "escribiendo" ---
+        // Registrar chat activo para auto-escribiendo
         if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
-        global.autoEscribiendo.add(m.chat);
+        if (m?.chat) global.autoEscribiendo.add(m.chat);
 
         // Inicializar auto-escribiendo y rechazo de llamadas
         setupAutoWritingAndReject(conn);
 
-        // Aquí podés seguir con el resto del handler normal
-        // ...
+        // Ejecutar todos los plugins cargados
+        for (let name in plugins) {
+            try {
+                const plugin = plugins[name];
+                // Cada plugin puede exportar handler(m, {conn})
+                if (typeof plugin === 'function') {
+                    await plugin(m, { conn });
+                }
+            } catch (e) {
+                console.error(`❌ Error ejecutando plugin ${name}:`, e);
+            }
+        }
 
     } catch (e) {
         console.error('❌ Error en handler principal:', e);
     }
 }
-
 import {generateWAMessageFromContent} from '@whiskeysockets/baileys';
 import {smsg} from './utils/simple.js';
 import {format} from 'util';

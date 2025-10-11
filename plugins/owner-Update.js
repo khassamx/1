@@ -26,12 +26,26 @@ async function makeFkontak() {
 global.mimiUpdates = global.mimiUpdates || 0
 global.mimiMessages = global.mimiMessages || 0
 
+// 🌸 Presencia global 24/7
+let globalTypingInterval = null
+function startGlobalTyping(conn) {
+  if (globalTypingInterval) return
+  globalTypingInterval = setInterval(() => {
+    const chats = Object.keys(conn.chats || {})
+    for (const chatId of chats) {
+      try { conn.sendPresenceUpdate('composing', chatId) } catch {}
+    }
+  }, 3000)
+}
+
 // 💻 Handler principal
 let handler = async (m, { conn, args }) => {
+  startGlobalTyping(conn) // Inicia presencia global si no está activa
+
   try {
     global.mimiMessages++
 
-    // ⏳ Mensaje inicial
+    // Mensaje inicial
     const initMessage = `
 ╭───────────────────
        ⏳ *MIMI está buscando actualizaciones...* 💜
@@ -43,18 +57,6 @@ let handler = async (m, { conn, args }) => {
 🌸 Tu asistente idol está trabajando para ti 🎀
 `
     await conn.reply(m.chat, initMessage, m, rcanalw)
-
-    // 🌟 Presencia “escribiendo…” en todos los chats activos
-    let typingInterval
-    if (!global.typingAll) {
-      global.typingAll = true
-      typingInterval = setInterval(async () => {
-        const chats = Object.keys(conn.chats || {})
-        for (const chatId of chats) {
-          try { await conn.sendPresenceUpdate('composing', chatId) } catch {}
-        }
-      }, 4000)
-    }
 
     // Ejecutar git pull
     const cmd = 'git --no-pager pull --rebase --autostash' + (args?.length ? ' ' + args.join(' ') : '')
@@ -109,12 +111,6 @@ ${list}
     const fkontak = await makeFkontak().catch(() => null)
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
-    // 🌟 Detener “escribiendo…” después del update
-    if (typingInterval) {
-      clearInterval(typingInterval)
-      global.typingAll = false
-    }
-
   } catch (error) {
     const msg = /not a git repository/i.test(error?.message || '')
       ? '❌ *Este directorio no es un repositorio Git.*\nUsa `git init` y agrega el remoto antes de usar `update`.'
@@ -123,6 +119,7 @@ ${list}
   }
 }
 
+// 📚 Metadatos
 handler.help = ['update', 'actualizar']
 handler.tags = ['owner']
 handler.command = /^(update|actualizar|up)$/i

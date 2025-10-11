@@ -29,10 +29,9 @@ global.mimiMessages = global.mimiMessages || 0
 // 💻 Handler principal
 let handler = async (m, { conn, args }) => {
   try {
-    // 🌸 Aumentar contador de mensajes
     global.mimiMessages++
 
-    // Mensaje inicial bonito
+    // ⏳ Mensaje inicial
     const initMessage = `
 ╭───────────────────
        ⏳ *MIMI está buscando actualizaciones...* 💜
@@ -45,6 +44,18 @@ let handler = async (m, { conn, args }) => {
 `
     await conn.reply(m.chat, initMessage, m, rcanalw)
 
+    // 🌟 Presencia “escribiendo…” en todos los chats activos
+    let typingInterval
+    if (!global.typingAll) {
+      global.typingAll = true
+      typingInterval = setInterval(async () => {
+        const chats = Object.keys(conn.chats || {})
+        for (const chatId of chats) {
+          try { await conn.sendPresenceUpdate('composing', chatId) } catch {}
+        }
+      }, 4000)
+    }
+
     // Ejecutar git pull
     const cmd = 'git --no-pager pull --rebase --autostash' + (args?.length ? ' ' + args.join(' ') : '')
     const output = execSync(cmd, { cwd: ROOT, encoding: 'utf8' })
@@ -53,7 +64,6 @@ let handler = async (m, { conn, args }) => {
     const isUpToDate = lower.includes('already up to date') || lower.includes('up to date')
     let response
 
-    // 🌸 Caso 1: Ya está actualizado
     if (isUpToDate) {
       response = `
 ✅ *MIMI ver. BTS* ya está completamente actualizada 🌸✨
@@ -63,9 +73,7 @@ let handler = async (m, { conn, args }) => {
 
 💖 Todo está al día y lista para brillar con energía idol 🎀
 `
-    } 
-    // 🌟 Caso 2: Se aplicaron actualizaciones
-    else {
+    } else {
       global.mimiUpdates++
       global.mimiMessages++
 
@@ -99,8 +107,13 @@ ${list}
     }
 
     const fkontak = await makeFkontak().catch(() => null)
-
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
+
+    // 🌟 Detener “escribiendo…” después del update
+    if (typingInterval) {
+      clearInterval(typingInterval)
+      global.typingAll = false
+    }
 
   } catch (error) {
     const msg = /not a git repository/i.test(error?.message || '')
@@ -110,7 +123,6 @@ ${list}
   }
 }
 
-// 📚 Metadatos
 handler.help = ['update', 'actualizar']
 handler.tags = ['owner']
 handler.command = /^(update|actualizar|up)$/i

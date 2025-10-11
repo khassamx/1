@@ -1,3 +1,6 @@
+// 📁 plugins/MIMI-BuscarMusica.js
+// 💜 MIMI ver. BTS — Buscador de Música con encanto idol 🌸
+
 import yts from 'yt-search'
 
 let handler = async (m, { conn, text, usedPrefix, command }) => {
@@ -5,49 +8,50 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
   const ctxWarn = (global.rcanalw || {})
   const ctxOk = (global.rcanalr || {})
 
-  
   if (global.db?.data?.users?.[m.sender]) {
     global.db.data.users[m.sender].dolares = global.db.data.users[m.sender].dolares || 0
-   
   }
 
   if (!text) {
     return conn.reply(m.chat, `
-🍙📚 Itsuki Nakano - Buscador de Música 🎵✨
+💜 안녕~ Soy *MIMI ver. BTS* 🎤✨  
+Tu asistente musical con alma de idol 🌸  
 
-🌟 ¡Como tutora musical, puedo ayudarte a encontrar canciones!
+🎶 ¿Qué canción te gustaría que busque, oppa~?
 
-📝 Forma de uso:
+📝 Usa el comando así:
 ${usedPrefix + command} <nombre de la canción>
 
 💡 Ejemplos:
-• ${usedPrefix + command} unravel Tokyo ghoul
-• ${usedPrefix + command} spy x family ending
-• ${usedPrefix + command} LiSA crossing field
+• ${usedPrefix + command} Love Me Like This NMIXX  
+• ${usedPrefix + command} Dynamite BTS  
+• ${usedPrefix + command} New Jeans ETA  
 
-🍱 ¡Encuentra tu música favorita! 🎶📖
+🌷 ¡Déjame encontrar tu ritmo perfecto! 💫  
     `.trim(), m, ctxWarn)
   }
 
   try {
     const searchResults = await yts(text)
     if (!searchResults.videos.length) {
-      return conn.reply(m.chat, '❌ No encontré esa canción 🎵\n\n🍙 ¡Por favor, verifica el nombre! 📖', m, ctxErr)
+      return conn.reply(m.chat, '😿 No pude encontrar esa canción, oppa~ 🎶\n\n💜 ¡Verifica el nombre y lo intento de nuevo! 🌸', m, ctxErr)
     }
 
     const video = searchResults.videos[0]
 
-    const songInfo = `🎵📚 Itsuki Nakano - Música Encontrada 🍙✨
+    const songInfo = `
+🎧✨ *MIMI ver. BTS encontró tu canción* 💜
 
-🎼 Título: ${video.title}
-⏱️ Duración: ${video.timestamp}
-👤 Artista/Canal: ${video.author.name}
-📊 Vistas: ${video.views.toLocaleString()}
+🎵 Título: ${video.title}
+👩‍🎤 Artista / Canal: ${video.author.name}
+🕒 Duración: ${video.timestamp}
 📅 Publicado: ${video.ago}
-🔗 URL: ${video.url}
+📊 Vistas: ${video.views.toLocaleString()}
+🔗 Enlace: ${video.url}
 
-✅ ¡Búsqueda exitosa!
-🍱 ¡Aquí tienes la información de tu canción! 🎶📖`
+💜 ¿Listo para sentir el beat? 🎶
+🌸 *MIMI te manda buena vibra musical~!* 🎤✨
+    `.trim()
 
     await conn.sendMessage(m.chat, {
       image: { url: video.thumbnail },
@@ -55,24 +59,25 @@ ${usedPrefix + command} <nombre de la canción>
     })
 
   } catch (error) {
-    console.error('Error en play:', error)
-    await conn.reply(m.chat, 
-      `❌ Error en la búsqueda\n\n` +
-      `🍙 ¡Lo siento! No pude buscar esta canción.\n\n` +
-      `🔧 Error: ${error.message}\n\n` +
-      `📖 ¡Intenta con otro nombre o más tarde! 🍱✨`,
-      m, ctxErr
+    console.error('Error en búsqueda musical:', error)
+    await conn.reply(
+      m.chat,
+      `❌ Oh no... algo salió mal 💔  
+🌸 *MIMI* no pudo buscar tu canción por ahora~  
+🔧 Error: ${error.message}  
+💜 Intenta de nuevo más tarde, ne~ 🎶`,
+      m,
+      ctxErr
     )
   }
 }
 
+handler.help = ['buscar <canción>', 'song <canción>', 'musica <canción>']
+handler.tags = ['musica', 'busqueda']
+handler.command = ['buscar', 'song', 'musica', 'music', 'mp3']
+
 handler.limit = false
 handler.premium = false
-handler.free = true 
 handler.register = false
-
-handler.help = ['Buscar <canción>', 'song <canción>', 'musica <canción>', 'buscar <canción>']
-handler.tags = ['busqueda']
-handler.command = ['buscar', 'song', 'musica', 'music', 'mp3']
 
 export default handler

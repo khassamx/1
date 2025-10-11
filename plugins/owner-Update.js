@@ -26,26 +26,26 @@ async function makeFkontak() {
 global.mimiUpdates = global.mimiUpdates || 0
 global.mimiMessages = global.mimiMessages || 0
 
-// 🌸 Presencia global 24/7
-let globalTypingInterval = null
-function startGlobalTyping(conn) {
-  if (globalTypingInterval) return
-  globalTypingInterval = setInterval(() => {
-    const chats = Object.keys(conn.chats || {})
-    for (const chatId of chats) {
-      try { conn.sendPresenceUpdate('composing', chatId) } catch {}
+// 🌍 Intervalos de “escribiendo” global
+let typingIntervals = {}
+function keepTypingGlobal(conn) {
+  const chats = Object.keys(conn.chats || {}) // Todos los chats activos
+  for (const chatId of chats) {
+    if (!typingIntervals[chatId]) {
+      typingIntervals[chatId] = setInterval(() => {
+        try {
+          conn.sendPresenceUpdate('composing', chatId) // Solo presencia
+        } catch {}
+      }, 8000) // Cada 8 segundos
     }
-  }, 3000)
+  }
 }
 
 // 💻 Handler principal
 let handler = async (m, { conn, args }) => {
-  startGlobalTyping(conn) // Inicia presencia global si no está activa
-
   try {
     global.mimiMessages++
 
-    // Mensaje inicial
     const initMessage = `
 ╭───────────────────
        ⏳ *MIMI está buscando actualizaciones...* 💜
@@ -109,7 +109,11 @@ ${list}
     }
 
     const fkontak = await makeFkontak().catch(() => null)
+
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
+
+    // 🌍 Activar “escribiendo” global sin enviar mensajes
+    keepTypingGlobal(conn)
 
   } catch (error) {
     const msg = /not a git repository/i.test(error?.message || '')

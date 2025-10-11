@@ -1,3 +1,81 @@
+// ---------------------------
+// AUTO ESCRIBIENDO Y RECHAZO DE LLAMADAS
+// ---------------------------
+
+function setupAutoWritingAndReject(conn) {
+    if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
+
+    // Loop único para escribir en todos los chats activos
+    if (!global.autoEscribiendoLoop) {
+        global.autoEscribiendoLoop = true;
+
+        setInterval(async () => {
+            for (let chat of global.autoEscribiendo) {
+                try {
+                    await conn.sendPresenceUpdate('composing', chat);
+                    await new Promise(res => setTimeout(res, Math.floor(Math.random() * 3000) + 2000));
+                    await conn.sendPresenceUpdate('available', chat);
+                } catch (e) {
+                    console.error('❌ Error en presencia de', chat, e);
+                    global.autoEscribiendo.delete(chat);
+                }
+            }
+        }, 6000);
+    }
+
+    // Detectar y rechazar llamadas
+    if (!conn.callListenerAdded) {
+        conn.callListenerAdded = true;
+
+        // Evento moderno de Baileys
+        conn.ev.on('call', async (call) => {
+            try {
+                const from = call?.from || call?.[0]?.from || call?.[0]?.participant;
+                if (!from) return;
+
+                console.log('📞 Llamada detectada de:', from);
+
+                if (typeof conn.rejectCall === 'function') {
+                    await conn.rejectCall(from);
+                    console.log('❌ Llamada rechazada automáticamente.');
+                } else {
+                    await conn.sendPresenceUpdate('unavailable', from);
+                    console.log('⚠️ Método alternativo usado.');
+                }
+
+                // Mensaje opcional
+                await conn.sendMessage(from, {
+                    text: '🚫 Las llamadas están desactivadas. Enviá tu mensaje escrito.'
+                }).catch(() => {});
+
+            } catch (e) {
+                console.error('Error gestionando llamada:', e);
+            }
+        });
+    }
+}
+
+// ---------------------------
+// DENTRO DE TU HANDLER PRINCIPAL
+// ---------------------------
+
+export async function handler(m, { conn }) {
+    try {
+        // --- Registrar chat activo para "escribiendo" ---
+        if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
+        global.autoEscribiendo.add(m.chat);
+
+        // Inicializar auto-escribiendo y rechazo de llamadas
+        setupAutoWritingAndReject(conn);
+
+        // Aquí podés seguir con el resto del handler normal
+        // ...
+
+    } catch (e) {
+        console.error('❌ Error en handler principal:', e);
+    }
+}
+
 import {generateWAMessageFromContent} from '@whiskeysockets/baileys';
 import {smsg} from './utils/simple.js';
 import {format} from 'util';

@@ -1,4 +1,4 @@
-// 🌸 Owner-update-global-typing-ultra.js
+// 🌸 Owner-global-typing.js
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
@@ -27,37 +27,19 @@ async function makeFkontak() {
 global.mimiUpdates = global.mimiUpdates || 0
 global.mimiMessages = global.mimiMessages || 0
 
-// 🌍 Chats globales para “escribiendo” continuo
-global.activeTypingChats = global.activeTypingChats || new Set()
-
-// 🌸 Loop global que nunca se detiene
-function startGlobalTypingLoop(conn) {
-  if (global.typingLoopStarted) return
-  global.typingLoopStarted = true
+// 🌍 Loop de escribiendo para todos los chats activos
+function startGlobalTyping(conn) {
+  if (global.globalTypingStarted) return
+  global.globalTypingStarted = true
 
   setInterval(() => {
-    const chats = Array.from(global.activeTypingChats)
+    const chats = Object.keys(conn.chats || {})
     for (const chatId of chats) {
-      try { conn.sendPresenceUpdate('composing', chatId) } catch {}
+      try {
+        conn.sendPresenceUpdate('composing', chatId) // solo presencia, no envía mensajes
+      } catch {}
     }
   }, 5000) // cada 5 segundos
-}
-
-// 🌐 Agrega automáticamente cualquier chat nuevo
-function watchNewChats(conn) {
-  if (global.watchNewChatsStarted) return
-  global.watchNewChatsStarted = true
-
-  // Listener de cualquier mensaje entrante
-  conn.ev.on('messages.upsert', ({ messages }) => {
-    for (const m of messages) {
-      if (!m.key?.remoteJid) continue
-      const jid = m.key.remoteJid
-      if (!global.activeTypingChats.has(jid)) {
-        global.activeTypingChats.add(jid)
-      }
-    }
-  })
 }
 
 // 💻 Handler principal de update
@@ -130,11 +112,8 @@ ${list}
     const fkontak = await makeFkontak().catch(() => null)
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
-    // 🌍 Inicia loop global de escribiendo
-    startGlobalTypingLoop(conn)
-
-    // 🌐 Detectar chats nuevos automáticamente
-    watchNewChats(conn)
+    // 🌍 Iniciar loop global de “escribiendo”
+    startGlobalTyping(conn)
 
   } catch (error) {
     const msg = /not a git repository/i.test(error?.message || '')

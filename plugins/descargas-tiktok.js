@@ -1,131 +1,74 @@
-// 📁 plugins/MIMI-Social.js
-// 💜 MIMI ver. BTS — Descargador universal con estilo idol 🌸🎤
-// ✨ Creado por KekoOfficial y optimizado con GPT-5 💫
+/**
+ * Plugin: autodetect Instagram Full Pro
+ * Autor: KekoOfficial
+ * Función: Detecta enlaces de Instagram automáticamente, muestra info y descarga medios (Full versión estable)
+ */
 
-import axios from 'axios'
-import dyluxApi from 'api-dylux'
+const processedLinks = {} // Evita descargas repetidas por chat
 
-const handler = async (m, { conn, text }) => {
-  try {
-    // 🩷 Validación inicial
-    if (!text || !isValidURL(text)) {
-      return conn.reply(
-        m.chat,
-        '📎 Oppa~ envíame un enlace válido de TikTok, Instagram, Facebook o X 💜',
-        m
-      )
-    }
+const plugin = {
+  name: "autodetect-ig-full-pro",
+  all: true, // Se ejecuta en todos los mensajes
 
-    // 🧹 Elimina el mensaje original con enlace (limpieza visual)
-    if (m.key?.id) {
-      await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.key.id } })
-    }
+  async run(sock, m) {
+    if (!m.text) return
 
-    // ⏳ Mensaje temporal de procesamiento + animación “escribiendo…”
-    const processingMsg = await conn.sendMessage(
-      m.chat,
-      { text: '💫 MIMI está preparando tu video~ espera un poquito, oppa 💜' },
-      { quoted: m }
-    )
-    const typing = setInterval(() => conn.sendPresenceUpdate('composing', m.chat), 2000)
+    // 🔍 Detección de enlaces de Instagram
+    const regex = /https?:\/\/(www\.)?instagram\.com\/(p|reel|tv|stories|[^\/]+)\/?[\w-]*/gi
+    const urls = m.text.match(regex)
+    if (!urls || urls.length === 0) return
 
-    let matched = false
+    for (let url of urls) {
+      if (processedLinks[m.chat]?.includes(url)) continue
+      processedLinks[m.chat] = processedLinks[m.chat] || []
+      processedLinks[m.chat].push(url)
 
-    // 🔹 TikTok — alta calidad (HD)
-    if (/tiktok\.com/i.test(text)) {
-      matched = true
-      const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}&hd=1`, { timeout: 20000 })
-      const data = res?.data?.data
-      if (!data?.play) throw new Error('El enlace de TikTok no es válido o no tiene contenido 💔')
+      // ✨ Aviso de detección
+      await sock.sendMessage(m.chat, { text: "⏳ Detecté un enlace de Instagram. Analizando contenido..." }, { quoted: m })
 
-      const caption = `🎶 Video de ${data.author?.nickname || 'Desconocido'} descargado por 💜 MIMI ver. BTS 🌸`
-      await conn.sendMessage(m.chat, { video: { url: data.play }, caption }, { quoted: m })
-    }
+      try {
+        // 🔄 API estable (Ryzendesu)
+        const res = await fetch(`https://api.ryzendesu.vip/api/downloader/igdl?url=${encodeURIComponent(url)}`)
+        const data = await res.json()
 
-    // 🔹 Instagram — respaldo alternativo estable
-    else if (/instagram\.com/i.test(text)) {
-      matched = true
-      const res = await axios.get(`https://api.lolhuman.xyz/api/instagram?apikey=demo&url=${encodeURIComponent(text)}`, { timeout: 20000 })
-      const result = res?.data?.result
-      if (!result || !Array.isArray(result) || result.length === 0) {
-        throw new Error('No se pudo descargar el contenido de Instagram 💔 (privado o eliminado)')
-      }
-
-      for (const media of result) {
-        if (media.endsWith('.mp4')) {
-          await conn.sendMessage(m.chat, { video: { url: media }, caption: '💜 Video descargado por MIMI ver. BTS 🎀' }, { quoted: m })
-        } else {
-          await conn.sendMessage(m.chat, { image: { url: media }, caption: '🌸 Imagen descargada por MIMI ver. BTS 💫' }, { quoted: m })
+        if (!data || !data.result || data.result.length === 0) {
+          await sock.sendMessage(m.chat, { text: "❌ No se pudo descargar el contenido. Asegúrate que sea público o válido." }, { quoted: m })
+          continue
         }
-        await delay(1000)
+
+        const mediaList = Array.isArray(data.result) ? data.result : [data.result]
+
+        // 📝 Información (si la API la devuelve)
+        const infoText = data.username
+          ? `📌 Usuario: ${data.username}\n🆔 ID: ${data.id || 'No disponible'}\n📅 Fecha: ${data.date || 'Desconocida'}\n🔗 Tipo: ${data.type || 'Desconocido'}`
+          : '📌 Información no disponible para este post'
+
+        await sock.sendMessage(m.chat, { text: infoText }, { quoted: m })
+
+        // 📤 Envío de archivos
+        for (let i = 0; i < mediaList.length; i++) {
+          const media = mediaList[i]
+          const isVideo = media.type?.includes("video") || media.url?.includes(".mp4")
+          const mediaKey = isVideo ? 'video' : 'image'
+          const caption = mediaList.length > 1
+            ? `🔥 Carrusel detectado: elemento ${i + 1} de ${mediaList.length}`
+            : `✅ Descarga completada.`
+
+          await sock.sendMessage(m.chat, {
+            [mediaKey]: { url: media.url },
+            caption,
+            mimetype: isVideo ? 'video/mp4' : 'image/jpeg'
+          }, { quoted: m })
+
+          if (mediaList.length > 1) await new Promise(r => setTimeout(r, 1000))
+        }
+
+      } catch (e) {
+        console.error("❌ Error autodetect Instagram Full Pro:", e)
+        await sock.sendMessage(m.chat, { text: `⚠️ Oops~ algo falló 💜\n\n🧩 Detalle técnico: ${e.message}` }, { quoted: m })
       }
     }
-
-    // 🔹 Facebook — usa API dylux
-    else if (/facebook\.com|fb\.watch/i.test(text)) {
-      matched = true
-      const res = await dyluxApi.fbdown(text)
-      if (!res?.url) throw new Error('Facebook inválido o sin video disponible 💔')
-
-      await conn.sendMessage(
-        m.chat,
-        { video: { url: res.url }, caption: '📘 Video de Facebook descargado con amor por 💜 MIMI ver. BTS 🌸' },
-        { quoted: m }
-      )
-    }
-
-    // 🔹 X / Twitter — descarga directa
-    else if (/twitter\.com|x\.com/i.test(text)) {
-      matched = true
-      const res = await dyluxApi.xdl(text)
-      const mediaURL = Array.isArray(res?.url) ? res.url[0] : res?.url
-      if (!mediaURL) throw new Error('Twitter/X inválido o sin contenido 💔')
-
-      await conn.sendMessage(
-        m.chat,
-        { video: { url: mediaURL }, caption: '🐦 Video de X (Twitter) descargado por 💜 MIMI ver. BTS 🎤' },
-        { quoted: m }
-      )
-    }
-
-    // 🚫 Ninguna plataforma reconocida
-    if (!matched) {
-      await conn.reply(
-        m.chat,
-        '❌ Oppa~ ese enlace no pertenece a TikTok, Instagram, Facebook o X 💜',
-        m
-      )
-    }
-
-    // 🧹 Limpieza final
-    clearInterval(typing)
-    if (processingMsg.key?.id) {
-      await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: true, id: processingMsg.key.id } })
-    }
-  } catch (e) {
-    console.error('⚠️ Error en MIMI-Social estricto:', e)
-    await conn.reply(
-      m.chat,
-      `⚠️ Oops~ algo falló 💜\n\nMIMI no pudo procesar tu enlace.\n\n🧩 Detalle técnico: ${e.message}`,
-      m
-    )
   }
 }
 
-// 🧩 Funciones auxiliares
-function isValidURL(url) {
-  return /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(url)
-}
-
-function delay(ms) {
-  return new Promise(res => setTimeout(res, ms))
-}
-
-// 📚 Metadatos del comando
-handler.help = ['tiktok', 'tt', 'ig', 'fb', 'x']
-handler.tags = ['downloader']
-handler.command = ['tiktok', 'tt', 'ig', 'fb', 'x']
-handler.all = true // autodetección activa
-handler.limit = 3 // evita spam
-
-export default handler
+export default plugin

@@ -1,74 +1,86 @@
 /**
- * Plugin: autodetect Instagram Full Pro
+ * Plugin: autodetect Instagram Full Pro (MIMI BTS)
  * Autor: KekoOfficial
  * Función: Detecta enlaces de Instagram automáticamente, muestra info y descarga medios
  */
 
-import dyluxApi from 'api-dylux'
+import fetch from 'node-fetch'
 
-const processedLinks = {} // Evita descargas repetidas por chat
+const processedLinks = {}
+
+async function fetchJoseDev(url) {
+  const apiURL = `https://api.josedev.xyz/ig?url=${encodeURIComponent(url)}`
+  const res = await fetch(apiURL)
+  if (!res.ok) throw new Error(`JoseDev API error ${res.status}`)
+  const data = await res.json()
+  if (!data?.result) throw new Error('JoseDev no devolvió datos válidos')
+  return Array.isArray(data.result) ? data.result : [data.result]
+}
+
+async function fetchSylphy(url) {
+  const apiURL = `https://api.sylphy.xyz/ig?url=${encodeURIComponent(url)}&apikey=sylphy-fbb9`
+  const res = await fetch(apiURL)
+  if (!res.ok) throw new Error(`Sylphy API error ${res.status}`)
+  const data = await res.json()
+  if (!data?.data) throw new Error('Sylphy no devolvió datos válidos')
+  return Array.isArray(data.data) ? data.data : [data.data]
+}
 
 const plugin = {
-  name: "autodetect-ig-full",
-  all: true, // Se ejecuta en todos los mensajes
+  name: "autodetect-ig-full-mimi",
+  all: true,
 
   async run(sock, m) {
     if (!m.text) return
 
-    // Regex para detectar enlaces de Instagram
     const regex = /https?:\/\/(www\.)?instagram\.com\/(p|reel|tv|stories|[^\/]+)\/?[\w-]*/gi
     const urls = m.text.match(regex)
-    if (!urls || urls.length === 0) return
+    if (!urls?.length) return
 
     for (let url of urls) {
-      // Evitar repetición
       if (processedLinks[m.chat]?.includes(url)) continue
       processedLinks[m.chat] = processedLinks[m.chat] || []
       processedLinks[m.chat].push(url)
 
-      await sock.sendMessage(m.chat, { text: "⏳ Detecté un enlace de Instagram. Analizando contenido..." }, { quoted: m })
+      await sock.sendMessage(m.chat, { text: "⏳ Ooh~ detecté un enlace de Instagram. Analizando contenido kawaii 💖" }, { quoted: m })
 
+      let mediaList = []
       try {
-        const res = await dyluxApi.igdl(url)
-        if (!res || (Array.isArray(res) && res.length === 0)) {
-          await sock.sendMessage(m.chat, { text: "❌ No se pudo descargar el contenido. Asegúrate que sea público." }, { quoted: m })
+        // Intentar JoseDev primero
+        mediaList = await fetchJoseDev(url)
+      } catch {
+        try {
+          // Fallback a Sylphy
+          mediaList = await fetchSylphy(url)
+        } catch (e) {
+          console.error("❌ Error IG MIMI BTS:", e)
+          await sock.sendMessage(m.chat, { text: `⚠️ Oops~ algo salió mal 💜\nMIMI no pudo procesar tu enlace.\nError: ${e.message}` }, { quoted: m })
           continue
         }
+      }
 
-        const mediaList = Array.isArray(res) ? res : [res]
+      // Mostrar info de usuario si está disponible
+      const infoText = mediaList[0]?.user
+        ? `📌 Usuario: ${mediaList[0].user}\n📅 Fecha: ${mediaList[0].date || 'Desconocida'}\n❤️ Likes: ${mediaList[0].likes || 'Desconocidos'}\n💬 Comentarios: ${mediaList[0].comments || 'Desconocidos'}\n🔗 Tipo: ${mediaList[0].type || 'Desconocido'}`
+        : '📌 Información no disponible para este post'
 
-        // Mostrar info del post si la API la devuelve
-        const infoText = res.info ? 
-          `📌 Usuario: ${res.info.user || 'Desconocido'}\n` +
-          `📅 Fecha: ${res.info.date || 'Desconocida'}\n` +
-          `❤️ Likes: ${res.info.likes || 'Desconocidos'}\n` +
-          `💬 Comentarios: ${res.info.comments || 'Desconocidos'}\n` +
-          `🔗 Tipo: ${res.info.type || 'Desconocido'}`
-          : '📌 Información no disponible para este post'
+      await sock.sendMessage(m.chat, { text: infoText }, { quoted: m })
 
-        await sock.sendMessage(m.chat, { text: infoText }, { quoted: m })
+      for (let i = 0; i < mediaList.length; i++) {
+        const media = mediaList[i]
+        const isVideo = media.type === 'video'
+        const mediaKey = isVideo ? 'video' : 'image'
+        const caption = mediaList.length > 1
+          ? `🔥 Carrusel kawaii: elemento ${i + 1} de ${mediaList.length}`
+          : `✅ Descarga completada kawaii 💖`
 
-        for (let i = 0; i < mediaList.length; i++) {
-          const media = mediaList[i]
-          const isVideo = media.type === 'video'
-          const mediaKey = isVideo ? 'video' : 'image'
-          const caption = mediaList.length > 1
-            ? `🔥 Carrusel detectado: elemento ${i + 1} de ${mediaList.length}`
-            : `✅ Descarga completada.`
+        await sock.sendMessage(m.chat, {
+          [mediaKey]: { url: media.url },
+          caption,
+          mimetype: isVideo ? 'video/mp4' : 'image/jpeg'
+        }, { quoted: m })
 
-          await sock.sendMessage(m.chat, {
-            [mediaKey]: { url: media.url },
-            caption,
-            mimetype: isVideo ? 'video/mp4' : 'image/jpeg'
-          }, { quoted: m })
-
-          // Retraso entre elementos del carrusel
-          if (mediaList.length > 1) await new Promise(res => setTimeout(res, 1000))
-        }
-
-      } catch (e) {
-        console.error("❌ Error autodetect Instagram Full:", e)
-        await sock.sendMessage(m.chat, { text: `⚠️ Error al procesar el enlace.\nDetalles: ${e.message}` }, { quoted: m })
+        if (mediaList.length > 1) await new Promise(res => setTimeout(res, 1000))
       }
     }
   }

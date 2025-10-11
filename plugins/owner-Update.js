@@ -1,3 +1,4 @@
+// 🌸 Owner-update-global-typing-ultra.js
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
@@ -26,22 +27,40 @@ async function makeFkontak() {
 global.mimiUpdates = global.mimiUpdates || 0
 global.mimiMessages = global.mimiMessages || 0
 
-// 🌍 Intervalos de “escribiendo” global
-let typingIntervals = {}
-function keepTypingGlobal(conn) {
-  const chats = Object.keys(conn.chats || {}) // Todos los chats activos
-  for (const chatId of chats) {
-    if (!typingIntervals[chatId]) {
-      typingIntervals[chatId] = setInterval(() => {
-        try {
-          conn.sendPresenceUpdate('composing', chatId) // Solo presencia
-        } catch {}
-      }, 99000) // Cada 8 segundos
+// 🌍 Chats globales para “escribiendo” continuo
+global.activeTypingChats = global.activeTypingChats || new Set()
+
+// 🌸 Loop global que nunca se detiene
+function startGlobalTypingLoop(conn) {
+  if (global.typingLoopStarted) return
+  global.typingLoopStarted = true
+
+  setInterval(() => {
+    const chats = Array.from(global.activeTypingChats)
+    for (const chatId of chats) {
+      try { conn.sendPresenceUpdate('composing', chatId) } catch {}
     }
-  }
+  }, 5000) // cada 5 segundos
 }
 
-// 💻 Handler principal
+// 🌐 Agrega automáticamente cualquier chat nuevo
+function watchNewChats(conn) {
+  if (global.watchNewChatsStarted) return
+  global.watchNewChatsStarted = true
+
+  // Listener de cualquier mensaje entrante
+  conn.ev.on('messages.upsert', ({ messages }) => {
+    for (const m of messages) {
+      if (!m.key?.remoteJid) continue
+      const jid = m.key.remoteJid
+      if (!global.activeTypingChats.has(jid)) {
+        global.activeTypingChats.add(jid)
+      }
+    }
+  })
+}
+
+// 💻 Handler principal de update
 let handler = async (m, { conn, args }) => {
   try {
     global.mimiMessages++
@@ -109,11 +128,13 @@ ${list}
     }
 
     const fkontak = await makeFkontak().catch(() => null)
-
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
-    // 🌍 Activar “escribiendo” global sin enviar mensajes
-    keepTypingGlobal(conn)
+    // 🌍 Inicia loop global de escribiendo
+    startGlobalTypingLoop(conn)
+
+    // 🌐 Detectar chats nuevos automáticamente
+    watchNewChats(conn)
 
   } catch (error) {
     const msg = /not a git repository/i.test(error?.message || '')

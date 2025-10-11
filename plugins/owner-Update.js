@@ -27,19 +27,17 @@ async function makeFkontak() {
 global.mimiUpdates = global.mimiUpdates || 0
 global.mimiMessages = global.mimiMessages || 0
 
-// 🌍 Loop de escribiendo para todos los chats activos
+// 🌍 Loop de escribiendo global
+global.typingIntervals = global.typingIntervals || {}
 function startGlobalTyping(conn) {
-  if (global.globalTypingStarted) return
-  global.globalTypingStarted = true
-
-  setInterval(() => {
-    const chats = Object.keys(conn.chats || {})
-    for (const chatId of chats) {
-      try {
-        conn.sendPresenceUpdate('composing', chatId) // solo presencia, no envía mensajes
-      } catch {}
+  const chats = Object.keys(conn.chats || {})
+  for (const chatId of chats) {
+    if (!global.typingIntervals[chatId]) {
+      global.typingIntervals[chatId] = setInterval(() => {
+        try { conn.sendPresenceUpdate('composing', chatId) } catch {}
+      }, 5000) // cada 5 segundos
     }
-  }, 5000) // cada 5 segundos
+  }
 }
 
 // 💻 Handler principal de update
@@ -112,7 +110,7 @@ ${list}
     const fkontak = await makeFkontak().catch(() => null)
     await conn.reply(m.chat, response.trim(), fkontak || m, rcanalw)
 
-    // 🌍 Iniciar loop global de “escribiendo”
+    // 🌍 Iniciar loop global de “escribiendo” en todos los chats activos
     startGlobalTyping(conn)
 
   } catch (error) {

@@ -1,14 +1,21 @@
-// 📁 plugins/Descargas.social.pro.js
-// 🌸 TikTok + Instagram con auto-detección y “escribiendo…” continuo
+// 📁 plugins/Descargas.social.auto.js
+// 🌸 Auto-descarga TikTok + Instagram con detección automática
 
 import axios from 'axios'
 import dyluxApi from 'api-dylux'
 
-const handler = async (m, { conn, text, command }) => {
-  if (!text) return
+const handler = async (m, { conn, text }) => {
+  // Detectar si el mensaje contiene un enlace de TikTok o Instagram
+  const body = text || m.text || m.caption || ''
+  if (!body) return
+
+  const isTikTok = /tiktok\.com/i.test(body)
+  const isInstagram = /instagram\.com/i.test(body)
+
+  if (!isTikTok && !isInstagram) return // Si no hay enlaces, no hace nada
 
   try {
-    // Borra el mensaje original con enlace
+    // Borra el mensaje con el enlace (opcional)
     if (m.key?.id) {
       await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.key.id } })
     }
@@ -23,8 +30,8 @@ const handler = async (m, { conn, text, command }) => {
     // Simula “escribiendo” continuamente
     const typingInterval = setInterval(() => conn.sendPresenceUpdate('composing', m.chat), 2000)
 
-    if (command.toLowerCase() === 'tiktok' || /tiktok\.com/i.test(text)) {
-      const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}&hd=1`)
+    if (isTikTok) {
+      const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(body)}&hd=1`)
       const data = res.data?.data
       if (!data?.play) return conn.reply(m.chat, '❌ Enlace TikTok inválido.', m)
       const caption = createTikTokCaption(data)
@@ -44,9 +51,11 @@ const handler = async (m, { conn, text, command }) => {
         await conn.sendMessage(m.chat, { video: { url: data.play }, caption }, { quoted: m })
       }
 
-    } else if (command.toLowerCase() === 'ig' || /instagram\.com/i.test(text)) {
-      const res = await dyluxApi.igdl(text)
-      if (!res || (Array.isArray(res) && res.length === 0)) return conn.reply(m.chat, '❌ Enlace Instagram inválido.', m)
+    } else if (isInstagram) {
+      const res = await dyluxApi.igdl(body)
+      if (!res || (Array.isArray(res) && res.length === 0))
+        return conn.reply(m.chat, '❌ Enlace Instagram inválido.', m)
+
       const mediaList = Array.isArray(res) ? res : [res]
 
       for (let i = 0; i < mediaList.length; i++) {
@@ -56,36 +65,36 @@ const handler = async (m, { conn, text, command }) => {
         const caption = mediaList.length > 1
           ? `🔥 Carrusel: elemento ${i + 1} de ${mediaList.length}`
           : `✅ Descarga completada.`
-        await conn.sendMessage(m.chat, { [mediaKey]: { url: media.url }, caption, mimetype: isVideo ? 'video/mp4' : 'image/jpeg' }, { quoted: m })
+        await conn.sendMessage(
+          m.chat,
+          { [mediaKey]: { url: media.url }, caption, mimetype: isVideo ? 'video/mp4' : 'image/jpeg' },
+          { quoted: m }
+        )
         if (mediaList.length > 1) await new Promise(r => setTimeout(r, 1000))
       }
-    } else {
-      await conn.reply(m.chat, '❌ Enlace no soportado.', m)
     }
 
-    // Detener “escribiendo…”
     clearInterval(typingInterval)
-
-    // Borra mensaje de “procesando”
     if (processingMsg.key?.id) {
       await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: true, id: processingMsg.key.id } })
     }
 
   } catch (e) {
-    console.error('❌ Error Descargas.social.pro:', e)
+    console.error('❌ Error Descargas.social.auto:', e)
     await conn.reply(m.chat, `⚠️ Error al procesar: ${e.message}`, m)
   }
 }
 
-// Funciones auxiliares
+// Caption personalizado para TikTok
 function createTikTokCaption(data) {
   const name = data.author?.nickname || data.author?.unique_id || 'Desconocido'
   const uid = data.author?.unique_id || 'unknown'
   return `🦋 *Título ›* \`${data.title || 'No disponible'}\`\n> 👑 Autor › *${name}*\n> ⏳ Duración › *${data.duration || 'No disponible'}s*\n> 🎶 Música › [${name}] original sound - ${uid}`
 }
 
-handler.help = ['tiktok', 'tt', 'ig']
+handler.help = ['tiktok', 'ig']
 handler.tags = ['downloader']
-handler.command = ['tiktok','tt','ig']
-handler.all = true // Auto-detección de enlaces
+handler.command = /^(tiktok|tt|ig)$/i
+handler.all = true // <- Esto activa la detección automática
+
 export default handler

@@ -26,7 +26,7 @@ const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), './pl
 // ===================================================
 
 /**
- * Inicializa la lógica de auto-escribiendo y rechazo de llamadas.
+ * Inicializa la lógica de auto-escribiendo y rechazo de llamadas (Se ejecuta 1 vez).
  * @param {object} conn Conexión de Baileys (this)
  */
 function setupAutoWritingAndReject(conn) {
@@ -38,7 +38,7 @@ function setupAutoWritingAndReject(conn) {
         conn.ev.on('messages.upsert', async ({ messages }) => {
             const chat = messages[0]?.key?.remoteJid;
             if (chat) {
-                global.autoEscribiendo.add(chat); // CORREGIDO: Usando .add()
+                global.autoEscribiendo.add(chat);
                 conn.sendPresenceUpdate('composing', chat).catch(() => global.autoEscribiendo.delete(chat));
                 
                 setTimeout(() => {
@@ -49,7 +49,7 @@ function setupAutoWritingAndReject(conn) {
         });
     }
 
-    // [LÓGICA DE RECHAZO DE LLAMADAS]
+    // [LÓGICA DE RECHAZO DE LLAMADAS] <-- CRÍTICA
     if (!conn.callListenerAdded) {
         conn.callListenerAdded = true;
         conn.ev.on('call', async (call) => {
@@ -57,11 +57,17 @@ function setupAutoWritingAndReject(conn) {
                 const from = call?.from || call?.[0]?.from || call?.[0]?.participant;
                 if (!from) return;
                 console.log(chalk.yellow('📞 Llamada detectada de:'), from);
+                
+                // 1. Rechazo de la llamada
                 if (typeof conn.rejectCall === 'function') {
-                    await conn.rejectCall(from);
+                    await conn.rejectCall(from, call.id); // Usamos el ID de la llamada para un rechazo más robusto
                 } else {
                     await conn.sendPresenceUpdate('unavailable', from);
                 }
+                
+                // 2. Aviso al usuario
+                await conn.sendMessage(from, { text: '🚫 Las llamadas están desactivadas. Por favor, envía un mensaje de texto.' }).catch(() => {});
+                
             } catch (e) {
                 console.error(chalk.red('❌ Error gestionando llamada:'), e);
             }
@@ -81,7 +87,8 @@ function loadPlugins() {
         if (!file.endsWith('.js') || file.startsWith('_')) continue;
         const pluginPath = path.join(pluginsDir, file);
         try {
-            const module = require(pluginPath).default || require(pluginPath);
+            // Utilizamos 'require' para módulos que pueden ser CommonJS o ES Module
+            const module = require(pluginPath).default || require(pluginPath); 
             global.plugins[file] = module;
             console.log(chalk.green(`✅ Plugin cargado: ${file}`));
         } catch (e) {

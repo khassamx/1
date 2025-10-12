@@ -1,7 +1,5 @@
 //adaptado para VEGETA-BOT-MB por BrayanOFC 
-process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
 import './config/config.js'
-import { setupMaster, fork } from 'cluster'
 import { watchFile, unwatchFile } from 'fs'
 import { createRequire } from 'module'
 import { fileURLToPath, pathToFileURL } from 'url'
@@ -36,9 +34,10 @@ import NodeCache from 'node-cache'
 const { CONNECTING } = ws
 const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
 
 // ===========================================
-// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO (AÑADIDA)
+// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO
 // ===========================================
 async function isValidPhoneNumber(phoneNumber) {
     if (typeof phoneNumber !== 'string') return false;
@@ -49,12 +48,10 @@ async function isValidPhoneNumber(phoneNumber) {
         return false;
     }
 }
-// ===========================================
 
 // ===========================================
-// FUNCIÓN redefineConsoleMethod (AÑADIDA)
-// Esta función era llamada pero no estaba definida.
-// Se añade una versión simple para evitar el crash.
+// FUNCIÓN redefineConsoleMethod
+// Se asegura de que esté definida para evitar errores
 // ===========================================
 function redefineConsoleMethod(methodName, filterStrings) {
     const originalMethod = console[methodName];
@@ -62,7 +59,7 @@ function redefineConsoleMethod(methodName, filterStrings) {
         console[methodName] = function(...args) {
             const message = args.map(arg => typeof arg === 'string' ? arg : format(arg)).join(' ');
             if (filterStrings.some(filter => Buffer.from(message).toString('base64').includes(filter))) {
-                return; // Suprime mensajes que coinciden con el filtro
+                return; 
             }
             originalMethod.apply(console, args);
         };
@@ -161,7 +158,6 @@ const filterStrings = [
 
 console.info = () => { }
 console.debug = () => { }
-// Ahora se llama correctamente a la función que se definió arriba
 ['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
 
 const connectionOptions = {
@@ -222,18 +218,12 @@ conn.logger.info(`[ ✿ ]  H E C H O\n`)
 if (!opts['test']) {
 if (global.db) setInterval(async () => {
 if (global.db.data) await global.db.write()
-// Se comentan las líneas de autocleartmp que causaban ReferenceError (variables os, cp, jadi)
-// if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [os.tmpdir(), 'tmp', `${jadi}`], tmp.forEach((filename) => cp.spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'])))
 }, 30 * 1000)
 }
 
-// ===========================================
-// SE SIMPLIFICA Y CORRIGE LA LÓGICA DE LID
-// La caché de LID no estaba definida, por lo que se retorna el JID.
-// ===========================================
 async function resolveLidToRealJid(lidJid, groupJid, maxRetries = 3, retryDelay = 1000) {
 if (!lidJid?.endsWith("@lid") || !groupJid?.endsWith("@g.us")) return lidJid?.includes("@") ? lidJid : `${lidJid}@s.whatsapp.net`
-return lidJid // Retorna el JID original si la caché no está definida.
+return lidJid 
 }
 
 async function extractAndProcessLids(text, groupJid) {
@@ -287,7 +277,6 @@ return messageCopy
 console.error('Error en processLidsInMessage:', e)
 return message
 }}
-// ===========================================
 
 async function connectionUpdate(update) {
 const {connection, lastDisconnect, isNewLogin} = update
@@ -306,7 +295,6 @@ console.log(chalk.green.bold(` 👑Escanea este código QR☁️`))}
 if (connection === "open") {
 const userJid = jidNormalizedUser(conn.user.id)
 const userName = conn.user.name || conn.user.verifiedName || "Desconocido"
-//await joinChannels(conn)
 console.log(chalk.green.bold(` 🐉Conectado a: ${userName}☁️`))
 }
 let reason = new Boom(lastDisconnect?.error)?.output?.statusCode
@@ -333,9 +321,11 @@ await global.reloadHandler(true).catch(console.error)
 } else {
 console.log(chalk.bold.redBright(`\n 🐉Conexión cerrada, conectese nuevamente SAIYAJIN☁️.`))
 }}}
+
 process.on('uncaughtException', console.error)
 let isInit = true
-global.handler = await import('./handler.js') // Se carga globalmente para evitar ReferenceError en la recarga
+// **CORRECCIÓN CLAVE:** Importamos el handler de forma asíncrona pero lo asignamos globalmente.
+global.handler = await import('./handler.js'); 
 
 global.reloadHandler = async function(restatConn) {
 try {
@@ -379,6 +369,7 @@ setInterval(() => {
 console.log('[ 🐉 ]  Reiniciando...');
 process.exit(0)
 }, 10800000)
+
 let rtU = join(__dirname, `./${jadi}`)
 if (!existsSync(rtU)) {
 mkdirSync(rtU, { recursive: true }) 

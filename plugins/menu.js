@@ -1,6 +1,7 @@
-// 📁 plugins/menu.js (Versión con Botones)
+// 📁 plugins/menu.js (Versión con Botones Robusta)
 
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
+import fs from 'fs'; // Necesario para la comprobación de archivos
 
 // Mapeo de categorías a etiquetas de comando
 const categoryMap = {
@@ -22,11 +23,10 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
         if (plugin.rowner && !isROwner) return false;
         if (plugin.owner && !isOwnerBot) return false;
         if (plugin.premium && !isPrems) return false;
-        // Agrega aquí más cheques de isMods, isAdmin, etc., si los usas
         return true;
     }
     
-    // 1. OBTENER Y CATEGORIZAR COMANDOS (para la sección de texto)
+    // 1. OBTENER Y CATEGORIZAR COMANDOS
     const categorizedCommands = {};
     for (const key in categoryMap) {
         categorizedCommands[key] = [];
@@ -36,13 +36,13 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
         const plugin = global.plugins[name];
         
         if (plugin.command && !plugin.disabled && checkPermission(plugin)) {
-            const tags = Array.isArray(plugin.tags) ? plugin.tags : [plugin.tags];
+            const tags = Array.isArray(plugin.tags) ? tags : [plugin.tags];
             
             for (const key in categoryMap) {
                 if (categoryMap[key].some(tag => tags.includes(tag))) {
                     const commands = Array.isArray(plugin.command) ? plugin.command : [plugin.command];
                     commands.forEach(cmd => {
-                        if (typeof cmd === 'string' && cmd !== 'menu') { // Excluir el propio comando !menu
+                        if (typeof cmd === 'string' && cmd !== 'menu') {
                             categorizedCommands[key].push(`!${cmd}`);
                         }
                     });
@@ -66,7 +66,6 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
     
 *╭──「 📚 GUÍA DE COMANDOS 」*
 *│* *│* *Toca un botón para ver los comandos de esa categoría.*
-*│* *│* *Ejemplo:* Usa \`!ping\`
 *│*
 *╰───────────────*
     
@@ -77,46 +76,72 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
     
     // Botones de Comando (Texto)
     for (const key in categorizedCommands) {
-        // Creamos un botón de texto para cada categoría
         buttons.push({
-            buttonId: `${usedPrefix}comandos ${key}`, // Comando interno para listar la categoría
+            buttonId: `${usedPrefix}comandos ${key}`, 
             buttonText: { displayText: `❰ ${key} ❱` },
             type: 1
         });
     }
 
-    // Botón de Enlace para el Creador (URL/Link)
+    // Botón de Enlace para el Creador
     buttons.push({
-        buttonId: usedPrefix + 'owner', // El botón redirige al comando !owner
+        buttonId: usedPrefix + 'owner', 
         buttonText: { displayText: `👑 Contactar Creador` },
         type: 1
     });
 
-    // 4. PREPARACIÓN DEL OBJETO DEL MENSAJE
-    const thumbnailBuffer = global.catalogo 
-        ? (await conn.getFile(global.catalogo).data) 
-        : Buffer.from(""); 
+    
+    // 4. PREPARACIÓN DE LA IMAGEN (Punto de Falla)
+    let media = null;
+    let caption = menuText;
+    let footer = `🫡 Creador: ${global.owner[0][1] || 'Owner'} | ${global.dev}`;
 
-    const buttonMessage = {
-        image: thumbnailBuffer, 
-        caption: menuText,
-        footer: `🫡 Creador: ${global.owner[0][1] || 'Owner'} | ${global.dev}`,
-        headerType: 4, // 4 = IMAGE / 1 = TEXT
-        buttons: buttons,
-    };
-    
-    // 5. ENVÍO DEL MENSAJE CON BOTONES
-    
-    // Si el usuario solo escribe !menu, enviamos el menú principal con botones
-    if (!m.text || !m.text.toLowerCase().startsWith('comandos')) {
-        return conn.sendMessage(m.chat, buttonMessage, { quoted: m });
+    try {
+        if (global.catalogo) {
+            // Intentamos obtener el archivo. conn.getFile es necesario aquí.
+            media = await conn.getFile(global.catalogo);
+            // Si tiene datos válidos, usamos la imagen
+            if (media?.data && media.data.length > 0) {
+                 media = media.data; // Usamos el buffer
+            } else {
+                 media = null; // Si no hay datos, volvemos a null para usar solo texto
+                 console.log('⚠️ Aviso: La URL del catálogo no devolvió datos válidos. Usando solo texto.');
+            }
+        }
+    } catch (e) {
+        console.error('❌ Error al obtener la imagen del catálogo para el menú:', e.message);
+        media = null; // Forzamos a que sea un mensaje de solo texto
     }
+    
+    // 5. ENVÍO ROBUSTO DEL MENSAJE
+    
+    if (media) {
+        // Enviar con imagen si el buffer es válido
+        const buttonMessage = {
+            image: media, 
+            caption: caption,
+            footer: footer,
+            headerType: 4, 
+            buttons: buttons,
+        };
+        await conn.sendMessage(m.chat, buttonMessage, { quoted: m });
 
+    } else {
+        // Enviar solo con texto y botones (Si falló la imagen)
+         const buttonMessage = {
+            text: caption,
+            footer: footer,
+            buttons: buttons,
+            headerType: 1
+        };
+        await conn.sendMessage(m.chat, buttonMessage, { quoted: m });
+    }
+    
     // 6. LÓGICA DE LISTADO DE COMANDOS (Si el usuario presionó un botón)
     const query = m.text.toLowerCase().replace('comandos', '').trim();
     const foundCategory = Object.keys(categoryMap).find(key => query.includes(key.toLowerCase()));
 
-    if (foundCategory) {
+    if (m.text && m.text.toLowerCase().startsWith('comandos') && foundCategory) {
         const commands = categorizedCommands[foundCategory];
         let commandList = `
 ╭──「 📚 **${foundCategory.toUpperCase()}** 」
@@ -130,8 +155,7 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
 
         conn.reply(m.chat, commandList.trim(), m);
         
-    } else {
-        // Si el query es inválido, mostramos un error simple.
+    } else if (m.text && m.text.toLowerCase().startsWith('comandos')) {
         conn.reply(m.chat, '❌ Categoría de comando no reconocida. Intenta de nuevo.', m);
     }
 };
@@ -141,6 +165,6 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
 // ===================================================
 handler.help = ['menu', 'help'];
 handler.tags = ['menu'];
-handler.command = ['menu', 'help', 'menú', 'ayuda', 'comandos']; // Añadimos 'comandos' para la lógica interna
+handler.command = ['menu', 'help', 'menú', 'ayuda', 'comandos'];
 
 export default handler;

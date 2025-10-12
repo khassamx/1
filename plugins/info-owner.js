@@ -1,7 +1,7 @@
 // 📁 plugins/info-owner.js
 
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
-import fs from 'fs'; // Necesario para leer la imagen si es local
+import fs from 'fs'; 
 
 const handler = async (m, { conn }) => {
     
@@ -15,9 +15,9 @@ const handler = async (m, { conn }) => {
     const numeroOwner = ownerData[0].replace(/[^0-9]/g, ''); 
     const nombreOwner = ownerData[1] || 'Owner del Bot';
     
-    // Obtener los enlaces de config.js
+    // Obtener los enlaces de config.js (asumiendo que Instagram ya tiene https://)
     const canal = global.channel || 'https://whatsapp.com/';
-    const instagram = global.ch?.ch3 || 'https://instagram.com/'; // De config.js
+    const instagram = global.ch?.ch3 || 'https://instagram.com/'; 
     
     // Usamos el catálogo como miniatura
     const thumbnailBuffer = global.catalogo 
@@ -36,7 +36,7 @@ X-SOCIALSTATUS:Soy el creador del bot. ¡Hola!
 END:VCARD`;
 
     // 3. ENVIAR EL CONTACTO USANDO generateWAMessageFromContent
-    // Esto incrusta el VCF en un mensaje con un Fake Reply (botones con enlaces).
+    // Incrusta el VCF en un mensaje con un Fake Reply (botones con enlaces).
     let msg = await generateWAMessageFromContent(m.chat, {
         "contactMessage": {
             "displayName": nombreOwner,
@@ -61,7 +61,7 @@ END:VCARD`;
                     // El sourceUrl es el enlace principal del "botón"
                     "sourceUrl": instagram // <-- Enlace de Instagram
                 },
-                "externalAdReply2": { // Segundo Fake Reply (Nuevo)
+                "externalAdReply2": { // Segundo Fake Reply (Canal)
                     "showAdAttribution": true,
                     "renderLargerThumbnail": true,
                     "title": `🔗 CANAL DE COMUNIDAD: ${nombreOwner}`,

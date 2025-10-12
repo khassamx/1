@@ -1,56 +1,79 @@
-// 📁 plugins/owner-group-count.js
+// 📁 plugins/grupo-info.js
 
-const handler = async (m, { conn, isOwner }) => {
+// Asumimos que global.moment está disponible desde config.js
+const handler = async (m, { conn, isOwner, isAdmin, isBotAdmin, participants, groupMetadata }) => {
     
-    // 1. CHEQUEO DE PERMISOS
+    // 1. CHEQUEO DE REQUISITOS
+    if (!m.isGroup) {
+        return global.dfail('group', m, conn);
+    }
     if (!isOwner) {
         return global.dfail('owner', m, conn);
     }
+
+    // 2. OBTENER METADATOS (ya vienen en el objeto 'groupMetadata', pero lo aseguramos)
+    if (!groupMetadata) {
+        groupMetadata = await conn.groupMetadata(m.chat).catch(e => {
+            console.error(e);
+            return null;
+        });
+    }
+
+    if (!groupMetadata) {
+        return conn.reply(m.chat, '❌ No se pudieron obtener los metadatos del grupo. Intenta de nuevo.', m);
+    }
+
+    const {
+        id,
+        subject, // Nombre del grupo
+        creation, // Timestamp de creación del grupo
+    } = groupMetadata;
+
+    // 3. CÁLCULO DE ESTADÍSTICAS
+    const memberCount = participants.length;
+    const adminCount = participants.filter(p => p.admin).length;
     
-    // 2. OBTENER GRUPOS
-    // conn.chats contiene una lista de todos los chats (privados, grupos, etc.)
-    // Filtramos para obtener solo los grupos
-    const groups = Object.values(conn.chats).filter(chat => 
-        chat.id.endsWith('@g.us') && chat.id !== 'status@broadcast'
-    );
+    // 4. TIEMPO DESDE CREACIÓN
+    // Usamos el timestamp de creación del grupo
+    const createdDate = global.moment(creation * 1000).tz('America/Asuncion');
+    const timeSinceCreation = createdDate.fromNow(); // Hace X tiempo
+    const creationTimeText = createdDate.format('DD/MM/YYYY hh:mm:ss A');
     
-    const totalGroups = groups.length;
-    
-    // 3. CONSTRUCCIÓN DEL MENSAJE
-    let text = `
-╭──「 🤖 **ESTADÍSTICAS DEL BOT** 」
+    // 5. ESTADO DEL BOT
+    const botStatus = isBotAdmin ? '✅ Sí, el bot es ADMINISTRADOR.' : '❌ No, el bot NO es administrador.';
+
+    // 6. CONSTRUCCIÓN DEL MENSAJE
+    const text = `
+╭──「 📝 **INFO DEL GRUPO** 」
 │ 
-│ *Grupos Totales:* **${totalGroups}**
+│ *Nombre:* ${subject}
 │ 
-│ *Miembros Globales:* │   (Incluyendo grupos, privados y canales)
-│   **${Object.keys(conn.chats).length} chats totales**
+│ *ID del Grupo:* ${id}
+│ 
+│ *Creado el:* ${creationTimeText}
+│ 
+│ *Tiempo desde Creación:* ${timeSinceCreation}
+│ 
+│ *Miembros Totales:* **${memberCount}**
+│ 
+│ *Administradores:* **${adminCount}**
+│ 
+│ *Estado del Bot:* ${botStatus}
 │
 ╰───────────────
-`;
-    
-    // Opcional: Lista de los 10 primeros grupos (si hay muchos)
-    /*
-    if (totalGroups > 0) {
-        text += '\n\n*Primeros 10 Grupos:*\n';
-        for (let i = 0; i < Math.min(10, groups.length); i++) {
-            const group = groups[i];
-            const name = group.name || 'Sin nombre';
-            const id = group.id.split('@')[0];
-            text += `• ${name} (${id})\n`;
-        }
-    }
-    */
-    
-    // 4. ENVÍO DEL MENSAJE
-    conn.reply(m.chat, text.trim(), m);
+`.trim();
+
+    // 7. ENVÍO DEL MENSAJE
+    conn.reply(m.chat, text, m);
 };
 
 // ===================================================
 // 🎯 EXPORTACIÓN
 // ===================================================
-handler.help = ['groups', 'botgroups'];
-handler.tags = ['owner'];
-handler.command = ['groups', 'botgroups', 'cuantosgrupos', 'botcount'];
+handler.help = ['ginfo', 'groupinfo'];
+handler.tags = ['owner', 'grupo'];
+handler.command = ['ginfo', 'groupinfo'];
 handler.owner = true; // Solo el Owner puede usarlo
+handler.group = true; // Solo en grupos
 
 export default handler;

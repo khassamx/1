@@ -37,6 +37,20 @@ const { CONNECTING } = ws
 const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
+// ===========================================
+// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO (Faltaba)
+// ===========================================
+async function isValidPhoneNumber(phoneNumber) {
+    if (typeof phoneNumber !== 'string') return;
+    try {
+        // Se carga de forma dinámica para evitar un crash si la importación falla
+        const { isPossibleNumber, isValidNumber } = await import('google-libphonenumber').catch(_ => ({}))
+        return isPossibleNumber?.(phoneNumber) && isValidNumber?.(phoneNumber)
+    } catch (e) {
+        return false; // Retorna falso si hay un error al usar la librería
+    }
+}
+// ===========================================
 
 console.log(chalk.bold.blueBright(`
 ╔═══════════════════════════════════════╗
@@ -129,7 +143,7 @@ const filterStrings = [
 
 console.info = () => { }
 console.debug = () => { }
-// Se comenta la siguiente línea porque la función 'redefineConsoleMethod' no está definida
+// La función 'redefineConsoleMethod' no está definida, se comenta para evitar un crash
 // ['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
 
 const connectionOptions = {
@@ -197,41 +211,8 @@ if (global.db.data) await global.db.write()
 
 async function resolveLidToRealJid(lidJid, groupJid, maxRetries = 3, retryDelay = 1000) {
 if (!lidJid?.endsWith("@lid") || !groupJid?.endsWith("@g.us")) return lidJid?.includes("@") ? lidJid : `${lidJid}@s.whatsapp.net`
-// La variable lidCache no está definida, retornamos el JID original para evitar el crash
-// const cached = lidCache.get(lidJid);
-// if (cached) return cached; 
+// La variable lidCache no está definida en este archivo, retornamos el JID original para evitar el crash
 return lidJid
-/* // Se comenta el resto de la lógica que depende de lidCache para evitar un ReferenceError
-const lidToFind = lidJid.split("@")[0];
-let attempts = 0
-while (attempts < maxRetries) {
-try {
-const metadata = await conn.groupMetadata(groupJid)
-if (!metadata?.participants) throw new Error("No se obtuvieron participantes")
-for (const participant of metadata.participants) {
-try {
-if (!participant?.jid) continue
-const contactDetails = await conn.onWhatsApp(participant.jid)
-if (!contactDetails?.[0]?.lid) continue
-const possibleLid = contactDetails[0].lid.split("@")[0]
-if (possibleLid === lidToFind) {
-lidCache.set(lidJid, participant.jid)
-return participant.jid
-}} catch (e) {
-continue
-}}
-lidCache.set(lidJid, lidJid)
-return lidJid
-} catch (e) {
-attempts++
-if (attempts >= maxRetries) {
-lidCache.set(lidJid, lidJid)
-return lidJid
-}
-await new Promise(resolve => setTimeout(resolve, retryDelay))
-}}
-return lidJid
-*/
 }
 
 async function extractAndProcessLids(text, groupJid) {
@@ -371,11 +352,11 @@ isInit = false
 return true
 }
 
-// Se elimina el setInterval de reinicio forzado para evitar el bucle de reinicio
-// setInterval(() => {
-// console.log('[ 🐉 ] Reiniciando...');
-// process.exit(0)
-// }, 10800000) 
+// Se mantiene el reinicio forzado si es lo que deseas (cada 3 horas)
+setInterval(() => {
+console.log('[ 🐉 ]  Reiniciando...');
+process.exit(0)
+}, 10800000)
 
 let rtU = join(__dirname, `./${jadi}`)
 if (!existsSync(rtU)) {
@@ -397,7 +378,7 @@ for (const gjbts of readRutaJadiBot) {
 const botPath = join(rutaJadiBot, gjbts)
 const readBotPath = readdirSync(botPath)
 if (readBotPath.includes(creds)) {
-JadiBot({JadiBot: botPath, m: null, conn, args: '', usedPrefix: '/', command: 'serbot'})
+vegetaJadiBot({JadiBot: botPath, m: null, conn, args: '', usedPrefix: '/', command: 'serbot'})
 }}}}
 
 const pluginFolder = global.__dirname(join(__dirname, './plugins/index'))

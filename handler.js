@@ -53,7 +53,7 @@ function setupAutoWritingAndReject(conn) {
         });
     }
 
-    // [LÓGICA DE RECHAZO DE LLAMADAS] <-- CRÍTICA
+    // [LÓGICA DE RECHAZO DE LLAMADAS]
     if (!conn.callListenerAdded) {
         conn.callListenerAdded = true;
         conn.ev.on('call', async (call) => {
@@ -117,7 +117,7 @@ async function defineRolesAndPermissions(conn, m) {
     const detectwhat = m.sender.includes('@lid') ? '@lid' : '@s.whatsapp.net';
     const isROwner = [...global.owner.map(([number]) => number)].map(v => v.replace(/[^0-9]/g, "") + detectwhat).includes(m.sender);
     const isOwner = isROwner || m.fromMe;
-    const isPrems = isROwner || global.db.data.users[m.sender].premiumTime > 0;
+    const isPrems = isROwner || global.db.data.users[m.sender]?.premiumTime > 0; // Uso seguro del operador ?.
 
     async function getLidFromJid(id, conn) {
         if (id.endsWith('@lid')) return id;
@@ -170,7 +170,7 @@ async function initializeDatabase(conn, m) {
         let chat = global.db.data.chats[m.chat];
         if (typeof chat !== 'object') global.db.data.chats[m.chat] = {};
         
-        // ¡IMPORTANTE! Estructura de chat con antiLink2 y autoPresencia
+        // Estructura de chat
         const defaultChat = {
             isBanned: false, sAutoresponder: '', welcome: true, autolevelup: false, autoresponder: false, 
             delete: false, autoAceptar: true, autoRechazar: true, detect: true, antiBot: true, 
@@ -386,6 +386,30 @@ export async function handler(chatUpdate) {
             }
             if (!opts['restrict'] && plugin.tags && plugin.tags.includes('admin')) continue
 
+            // -------------------------------------------------------------------------
+            // 📌 CONTROL CRÍTICO DE LISTA NEGRA (BLACKlIST)
+            // -------------------------------------------------------------------------
+            global.blockedgroups = global.blockedgroups || new Set();
+            if (m.isGroup && global.blockedgroups.has(m.chat)) {
+                // Comandos que siempre están permitidos incluso si el grupo está bloqueado
+                const allowedCommands = ['owner', 'addgrupo', 'addbotx', 'menu', 'help', 'menú', 'ayuda']; 
+                
+                // Si el plugin actual es de OWNER (siempre debe pasar)
+                if (plugin.tags && plugin.tags.includes('owner')) {
+                    // Permitido
+                } 
+                // Si el comando es uno de los comandos permitidos
+                else if (allowedCommands.some(cmd => plugin.command && (Array.isArray(plugin.command) ? plugin.command.includes(cmd) : plugin.command === cmd))) {
+                    // Permitido
+                } 
+                else {
+                    // Bloqueamos cualquier otro plugin en un grupo bloqueado.
+                    continue; 
+                }
+            }
+            // -------------------------------------------------------------------------
+
+
             // -> Comprobación de Prefijo y Comando
             const { match, usedPrefix: prefixMatch, command, noPrefix, args, text, isAccept } = checkCommand(this, m, plugin);
             
@@ -463,7 +487,7 @@ export async function handler(chatUpdate) {
 
 
 // ===================================================
-// ⚠️ FUNCIÓN DE FALLO (DFAIL) - CORREGIDA (Línea 600+)
+// ⚠️ FUNCIÓN DE FALLO (DFAIL) - CORREGIDA
 // ===================================================
 
 global.dfail = (type, m, conn) => {
@@ -482,7 +506,7 @@ global.dfail = (type, m, conn) => {
 
     const replyMsg = msg[type] || `⚠️ Error de permiso desconocido: ${type}`;
     
-    // **CORRECCIÓN CRÍTICA:** Uso seguro de conn.reply
+    // **CORRECCIÓN CRÍTICA:** Uso seguro de conn.reply (para evitar el TypeError)
     if (conn && typeof conn.reply === 'function') {
         conn.reply(m.chat, replyMsg, m);
     } else {

@@ -1,30 +1,34 @@
-// 📁 plugins/menu.js (Versión Única y Robusta con Listado Interno)
+// 📁 plugins/menu.js (Versión de Solo Texto)
 
-import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
-import fs from 'fs'; 
-
-// Mapeo de categorías a etiquetas de comando
 const categoryMap = {
-    'Grupos': ['grupo'],
-    'Descargas': ['descargas', 'sticker'], 
-    'Info/Utilidades': ['info', 'sistema', 'menu'], 
-    'Creador/Owner': ['owner'],
+    'menu': '📋 Menú',
+    'info': 'ℹ️ Info/Utilidades',
+    'descargas': '⬇️ Descargas',
+    'sticker': '🖼️ Stickers/Media',
+    'grupo': '👥 Grupos',
+    'owner': '👑 Creador/Owner',
+    'sistema': '⚙️ Sistema', 
 };
 
-// Función de ayuda para obtener la lista de comandos de una categoría
-const getCommandList = (categoryKey, isROwner, isOwnerBot, isPrems) => {
+const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
+
+    // 0. OBTENER PERMISOS
+    const detectwhat = m.sender.includes('@lid') ? '@lid' : '@s.whatsapp.net';
+    const isROwner = [...global.owner.map(([number]) => number)].map(v => v.replace(/[^0-9]/g, "") + detectwhat).includes(m.sender);
+    const isOwnerBot = isROwner || m.fromMe;
     
-    const tagsToMatch = categoryMap[categoryKey];
-    if (!tagsToMatch) return '❌ Categoría de comando no reconocida.';
-    
-    const commandsToDisplay = [];
-    
-    // Filtro de permisos
+    // Función para verificar si el usuario tiene permiso para ver un comando
     const checkPermission = (plugin) => {
         if (plugin.rowner && !isROwner) return false;
         if (plugin.owner && !isOwnerBot) return false;
         if (plugin.premium && !isPrems) return false;
         return true;
+    }
+    
+    // 1. OBTENER Y CATEGORIZAR COMANDOS
+    const categorizedCommands = {};
+    for (const tag in categoryMap) {
+        categorizedCommands[tag] = [];
     }
 
     for (const name in global.plugins) {
@@ -33,62 +37,23 @@ const getCommandList = (categoryKey, isROwner, isOwnerBot, isPrems) => {
         if (plugin.command && !plugin.disabled && checkPermission(plugin)) {
             const tags = Array.isArray(plugin.tags) ? plugin.tags : [plugin.tags];
             
-            if (tagsToMatch.some(tag => tags.includes(tag))) {
-                const commands = Array.isArray(plugin.command) ? plugin.command : [plugin.command];
-                commands.forEach(cmd => {
-                    if (typeof cmd === 'string' && cmd !== 'menu' && cmd !== 'comandos') {
-                        commandsToDisplay.push(`!${cmd}`);
-                    }
-                });
+            for (const tag of tags) {
+                // Si la etiqueta está en nuestras categorías, añadimos el comando
+                if (categorizedCommands[tag]) {
+                    const commands = Array.isArray(plugin.command) ? plugin.command : [plugin.command];
+                    commands.forEach(cmd => {
+                        if (typeof cmd === 'string' && cmd !== 'menu') {
+                            categorizedCommands[tag].push(cmd);
+                        }
+                    });
+                    break; // Solo necesitamos añadirlo a una categoría
+                }
             }
         }
     }
 
-    if (commandsToDisplay.length === 0) {
-        return `⚠️ No hay comandos disponibles en la categoría **${categoryKey}** para tu rol.`;
-    }
+    // 2. CONSTRUCCIÓN DEL MENSAJE DE TEXTO
 
-    let commandList = `
-╭──「 📚 **${categoryKey.toUpperCase()}** 」
-│ 
-│ *Total Comandos:* ${commandsToDisplay.length}
-│ 
-*╰───────────────*
-`.trim();
-        
-    commandList += commandsToDisplay.sort().map(cmd => `\n• \`${cmd}\``).join('');
-    
-    return commandList.trim();
-};
-
-
-// ----------------------------------------------------------------------
-// 🎯 HANDLER PRINCIPAL
-// ----------------------------------------------------------------------
-
-const handler = async (m, { conn, isOwner, isPrems, usedPrefix, text }) => {
-
-    // 0. OBTENER PERMISOS
-    const detectwhat = m.sender.includes('@lid') ? '@lid' : '@s.whatsapp.net';
-    const isROwner = [...global.owner.map(([number]) => number)].map(v => v.replace(/[^0-9]/g, "") + detectwhat).includes(m.sender);
-    const isOwnerBot = isROwner || m.fromMe;
-    
-    // 1. LÓGICA DE RESPUESTA A BOTONES (LISTADO)
-    // Se dispara si el mensaje empieza con !comandos (mensaje de texto generado por el botón)
-    if (m.text && m.text.toLowerCase().startsWith('comandos')) {
-        const query = m.text.toLowerCase().replace('comandos', '').trim();
-        const foundCategoryKey = Object.keys(categoryMap).find(key => query.includes(key.toLowerCase()));
-        
-        if (foundCategoryKey) {
-            const list = getCommandList(foundCategoryKey, isROwner, isOwnerBot, isPrems);
-            return conn.reply(m.chat, list, m);
-        } else {
-             // Si presiona el botón, pero la categoría no se encuentra
-             return conn.reply(m.chat, '❌ Error al procesar el botón de categoría. Intenta de nuevo con `!menu`', m);
-        }
-    }
-    
-    // 2. CONSTRUCCIÓN DEL MENSAJE DE TEXTO (HEADER)
     let menuText = `
 *╭──「 👑 ${global.namebot} 」*
 *│*
@@ -98,60 +63,35 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix, text }) => {
 *│* 🕒 *Hora:* ${new Date().toLocaleTimeString('es-ES', { timeZone: 'America/Asuncion' })}
 *│* *╰───────────────*
     
-*╭──「 📚 GUÍA DE COMANDOS 」*
-*│* *│* *Toca un botón para ver los comandos de esa categoría.*
-*│*
+*╭──「 📜 COMANDOS DISPONIBLES 」*
+`.trim();
+
+    // Iterar sobre las categorías para construir el menú
+    for (const tag in categoryMap) {
+        const title = categoryMap[tag];
+        const commands = categorizedCommands[tag];
+        
+        if (commands.length > 0) {
+            menuText += `\n*│*`;
+            menuText += `\n*│ ❰ ${title} ❱*`;
+            menuText += '\n*│*';
+            
+            commands.sort().forEach(cmd => {
+                menuText += `\n*│* • \`${usedPrefix}${cmd}\``;
+            });
+            menuText += '\n*│*';
+        }
+    }
+
+    menuText += `
 *╰───────────────*
+    
+*👑 Contacto Owner:* ${usedPrefix}owner
     
 `.trim();
 
-    // 3. DEFINICIÓN DE BOTONES
-    const buttons = [];
-    
-    // Botones de Comando (Texto). Apuntan a !comandos
-    for (const key in categoryMap) {
-        buttons.push({
-            // El buttonId ahora es !comandos <NombreCategoria>
-            buttonId: `${usedPrefix}comandos ${key}`, 
-            buttonText: { displayText: `❰ ${key} ❱` },
-            type: 1
-        });
-    }
-
-    // Botón para el Creador
-    buttons.push({
-        buttonId: usedPrefix + 'owner', 
-        buttonText: { displayText: `👑 Contactar Creador` },
-        type: 1
-    });
-
-    
-    // 4. PREPARACIÓN Y ENVÍO ROBUSTO (con manejo de errores de imagen)
-    let media = null;
-    let caption = menuText;
-    let footer = `🫡 Creador: ${global.owner[0][1] || 'Owner'} | ${global.dev}`;
-
-    try {
-        if (global.catalogo) {
-            media = await conn.getFile(global.catalogo);
-            if (media?.data && media.data.length > 0) {
-                 media = media.data; 
-            } else {
-                 media = null; 
-            }
-        }
-    } catch (e) {
-        console.error('❌ Error al obtener la imagen del catálogo para el menú:', e.message);
-        media = null; 
-    }
-    
-    // Enviar mensaje con o sin imagen
-    const messagePayload = media 
-        ? { image: media, caption: caption, footer: footer, headerType: 4, buttons: buttons }
-        : { text: caption, footer: footer, buttons: buttons, headerType: 1 };
-        
-    // 5. ENVÍO DEL MENÚ PRINCIPAL
-    await conn.sendMessage(m.chat, messagePayload, { quoted: m });
+    // 3. ENVÍO DEL MENSAJE DE SOLO TEXTO
+    conn.reply(m.chat, menuText, m);
 };
 
 // ===================================================
@@ -159,6 +99,6 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix, text }) => {
 // ===================================================
 handler.help = ['menu', 'help'];
 handler.tags = ['menu'];
-handler.command = ['menu', 'help', 'menú', 'ayuda', 'comandos']; // Añadimos 'comandos'
+handler.command = ['menu', 'help', 'menú', 'ayuda'];
 
 export default handler;

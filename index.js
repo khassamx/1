@@ -50,8 +50,7 @@ async function isValidPhoneNumber(phoneNumber) {
 }
 
 // ===========================================
-// FUNCIÓN redefineConsoleMethod
-// Se asegura de que esté definida para evitar errores
+// FUNCIÓN redefineConsoleMethod (PARA FILTRAR MENSAJES DE ERROR DE BAILYS)
 // ===========================================
 function redefineConsoleMethod(methodName, filterStrings) {
     const originalMethod = console[methodName];
@@ -148,12 +147,12 @@ console.log(chalk.bold.redBright(`☁️No se permiten numeros que no sean 1 o 2
 } 
 
 const filterStrings = [
-"Q2xvc2luZyBzdGFsZSBvcGVu", // "Closing stable open"
-"Q2xvc2luZyBvcGVuIHNlc3Npb24=", // "Closing open session"
-"RmFpbGVkIHRvIGRlY3J5cHQ=", // "Failed to decrypt"
-"U2Vzc2lvbiBlcnJvcg==", // "Session error"
-"RXJyb3I6IEJhZCBNQUM=", // "Error: Bad MAC" 
-"RGVjcnlwdGVkIG1lc3NhZ2U=" // "Decrypted message" 
+"Q2xvc2luZyBzdGFsZSBvcGVu", 
+"Q2xvc2luZyBvcGVuIHNlc3Npb24=", 
+"RmFpbGVkIHRvIGRlY3J5cHQ=", 
+"U2Vzc2lvbiBlcnJvcg==", 
+"RXJyb3I6IEJhZCBNQUM=", 
+"RGVjcnlwdGVkIG1lc3NhZ2U=" 
 ]
 
 console.info = () => { }
@@ -324,16 +323,18 @@ console.log(chalk.bold.redBright(`\n 🐉Conexión cerrada, conectese nuevamente
 
 process.on('uncaughtException', console.error)
 let isInit = true
-// **CORRECCIÓN CLAVE:** Importamos el handler de forma asíncrona pero lo asignamos globalmente.
-global.handler = await import('./handler.js'); 
+// **IMPORTANTE: global.handler se declara aquí, pero se asigna DENTRO de reloadHandler
+global.handler = {} 
 
 global.reloadHandler = async function(restatConn) {
 try {
+// Carga el handler de forma asíncrona usando un timestamp para evitar caché
 const Handler = await import(`./handler.js?update=${Date.now()}`).catch(console.error);
 if (Object.keys(Handler || {}).length) global.handler = Handler;
 } catch (e) {
-console.error(e);
+console.error("Error al cargar handler.js:", e);
 }
+
 if (restatConn) {
 const oldChats = global.conn.chats
 try {
@@ -348,9 +349,20 @@ conn.ev.off('messages.upsert', conn.handler)
 conn.ev.off('connection.update', conn.connectionUpdate)
 conn.ev.off('creds.update', conn.credsUpdate)
 }
-conn.handler = global.handler.handler.bind(global.conn)
+
+// Verifica si global.handler.handler está definido antes de asignarlo
+if (global.handler && global.handler.handler) {
+    conn.handler = global.handler.handler.bind(global.conn)
+} else {
+    // Esto debería alertar si handler.js sigue teniendo errores de sintaxis
+    console.error(chalk.bold.redBright("ATENCIÓN: EL HANDLER NO SE HA CARGADO CORRECTAMENTE. REVISA handler.js"));
+    return false;
+}
+
 conn.connectionUpdate = connectionUpdate.bind(global.conn)
 conn.credsUpdate = saveCreds.bind(global.conn, true)
+
+// Lógica de chats de conexión (no crítica)
 const currentDateTime = new Date()
 const messageDateTime = new Date(conn.ev)
 if (currentDateTime >= messageDateTime) {
@@ -358,6 +370,7 @@ const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('
 } else {
 const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
 }
+
 conn.ev.on('messages.upsert', conn.handler)
 conn.ev.on('connection.update', conn.connectionUpdate)
 conn.ev.on('creds.update', conn.credsUpdate)

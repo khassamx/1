@@ -1,4 +1,5 @@
-// 📁 handler.js
+// handler.js (Versión Completa y Refactorizada)
+
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
 import { smsg } from './utils/simple.js';
 import { format } from 'util';
@@ -13,7 +14,6 @@ import ws from 'ws';
 // 💬 FUNCIONES DE UTILIDAD Y CONSTANTES
 // ===================================================
 
-const { proto } = (await import('@whiskeysockets/baileys')).default
 const isNumber = x => typeof x === 'number' && !isNaN(x)
 const delay = ms => isNumber(ms) && new Promise(resolve => setTimeout(function () {
     clearTimeout(this)
@@ -21,6 +21,8 @@ const delay = ms => isNumber(ms) && new Promise(resolve => setTimeout(function (
 }, ms))
 const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), './plugins')
 
+// Variables que requieren importación asíncrona
+let proto = null;
 
 // ===================================================
 // ⚙️ INICIALIZACIÓN DE CORE Y PLUGINS
@@ -31,19 +33,15 @@ const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), './pl
  * @param {object} conn Conexión de Baileys (this)
  */
 function setupAutoWritingAndReject(conn) {
-    // CRÍTICO: Aseguramos que sea un Set para el plugin auto-presencia.js
     if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
-
+    
     // [LÓGICA DE PRESENCIA/AUTO-ESCRIBIENDO]
     if (!conn.presenceListenerAdded) {
         conn.presenceListenerAdded = true;
         conn.ev.on('messages.upsert', async ({ messages }) => {
             const chat = messages[0]?.key?.remoteJid;
             if (chat && global.autoEscribiendo.has(chat)) {
-                // Si el chat está en el Set, actualiza la presencia
                 conn.sendPresenceUpdate('composing', chat).catch(() => global.autoEscribiendo.delete(chat));
-
-                // Limpieza después de un tiempo corto si el plugin no lo hizo
                 setTimeout(() => {
                     if (global.autoEscribiendo.has(chat)) {
                         global.autoEscribiendo.delete(chat);
@@ -62,17 +60,8 @@ function setupAutoWritingAndReject(conn) {
                 const from = call?.from || call?.[0]?.from || call?.[0]?.participant;
                 if (!from) return;
                 console.log(chalk.yellow('📞 Llamada detectada de:'), from);
-
-                // 1. Rechazo de la llamada
-                if (typeof conn.rejectCall === 'function') {
-                    await conn.rejectCall(from, call.id); // Usamos el ID de la llamada
-                } else {
-                    await conn.sendPresenceUpdate('unavailable', from);
-                }
-
-                // 2. Aviso al usuario
+                await conn.rejectCall(from, call.id).catch(() => conn.sendPresenceUpdate('unavailable', from));
                 await conn.sendMessage(from, { text: '🚫 Las llamadas están desactivadas. Por favor, envía un mensaje de texto.' }).catch(() => {});
-
             } catch (e) {
                 console.error(chalk.red('❌ Error gestionando llamada:'), e);
             }
@@ -82,8 +71,9 @@ function setupAutoWritingAndReject(conn) {
 
 /**
  * Carga todos los plugins de la carpeta './plugins'.
+ * 🚨 CORRECCIÓN CLAVE: Esta función es ahora 'async' para poder usar 'await import()'.
  */
-function loadPlugins() {
+async function loadPlugins() {
     const pluginsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), './plugins');
     global.plugins = {};
     const files = fs.readdirSync(pluginsDir);
@@ -92,24 +82,43 @@ function loadPlugins() {
         if (!file.endsWith('.js') || file.startsWith('_')) continue;
         const pluginPath = path.join(pluginsDir, file);
         try {
-            // Utilizamos import() dinámico para ESM
-            const module = (await import(pluginPath)).default || (await import(pluginPath)); 
+            const module = (await import(`${pluginPath}?update=${Date.now()}`)).default; // Usar Date.now para evitar caché
             global.plugins[file] = module;
-            console.log(chalk.green(`✅ Plugin cargado: ${file}`));
+            // console.log(chalk.green(`✅ Plugin cargado: ${file}`));
         } catch (e) {
             console.error(chalk.red(`❌ Error cargando plugin ${file}:`), e);
         }
     }
+    console.log(chalk.yellow(`💡 Se cargaron ${Object.keys(global.plugins).length} plugins.`));
 }
 
-// Carga de plugins al inicio
-await loadPlugins(); 
-console.log(chalk.yellow(`💡 Se cargaron ${Object.keys(global.plugins).length} plugins.`));
+/**
+ * Función de inicialización asíncrona para elementos de nivel superior.
+ * 🚨 CORRECCIÓN CLAVE: Envuelve await import para el nivel superior.
+ */
+async function initHandler() {
+    try {
+        // Cargar proto
+        const baileysModule = await import('@whiskeysockets/baileys');
+        proto = baileysModule.default?.proto || baileysModule.proto; 
+        
+        // Cargar plugins
+        await loadPlugins();
+
+    } catch (e) {
+        console.error(chalk.red("Error crítico al inicializar handler/plugins:"), e);
+    }
+}
+
+// Ejecutar la inicialización inmediatamente
+initHandler().catch(console.error);
 
 
 // ===================================================
 // 🧠 FUNCIONES AUXILIARES DE HANDLER
 // ===================================================
+
+// [Resto de las funciones auxiliares de tu código: defineRolesAndPermissions, initializeDatabase, checkCommand, checkPluginRequirements, finalLogic]
 
 /**
  * Define y obtiene los roles y permisos del usuario y bot en el chat.
@@ -118,7 +127,7 @@ async function defineRolesAndPermissions(conn, m) {
     const detectwhat = m.sender.includes('@lid') ? '@lid' : '@s.whatsapp.net';
     const isROwner = [...global.owner.map(([number]) => number)].map(v => v.replace(/[^0-9]/g, "") + detectwhat).includes(m.sender);
     const isOwner = isROwner || m.fromMe;
-    const isPrems = isROwner || global.db.data.users[m.sender]?.premiumTime > 0; // Uso seguro del operador ?.
+    const isPrems = isROwner || global.db.data.users[m.sender]?.premiumTime > 0;
 
     async function getLidFromJid(id, conn) {
         if (id.endsWith('@lid')) return id;
@@ -140,7 +149,7 @@ async function defineRolesAndPermissions(conn, m) {
     const isRAdmin = (user && user.admin) === 'superadmin';
     const isAdmin = isRAdmin || ((user && user.admin) === 'admin');
     const isBotAdmin = !!(bot && bot.admin);
-    const isMods = global.mods.map(v => v.replace(/[^0-9]/g, "") + detectwhat).includes(m.sender); // Definición de Mods
+    const isMods = global.mods.map(v => v.replace(/[^0-9]/g, "") + detectwhat).includes(m.sender);
 
     return { isROwner, isOwner, isPrems, senderLid, botLid, user, bot, isRAdmin, isAdmin, isBotAdmin, participants, groupMetadata, isMods };
 }
@@ -171,7 +180,6 @@ async function initializeDatabase(conn, m) {
         let chat = global.db.data.chats[m.chat];
         if (typeof chat !== 'object') global.db.data.chats[m.chat] = {};
 
-        // Estructura de chat
         const defaultChat = {
             isBanned: false, sAutoresponder: '', welcome: true, autolevelup: false, autoresponder: false, 
             delete: false, autoAceptar: true, autoRechazar: true, detect: true, antiBot: true, 
@@ -243,14 +251,12 @@ function checkCommand(conn, m, plugin) {
     return { match, usedPrefix, command, noPrefix, args, text, isAccept };
 }
 
-
 /**
  * Verifica los requisitos del plugin (roles, permisos, economía).
  */
 function checkPluginRequirements(conn, m, plugin, { isROwner, isOwner, isMods, isPrems, isAdmin, isBotAdmin, _user, usedPrefix }) {
     let fail = plugin.fail || global.dfail;
 
-    // CRÍTICO: Aseguramos que 'conn' se pase correctamente a dfail
     if (plugin.rowner && plugin.owner && !(isROwner || isOwner)) { fail('owner', m, conn); return false; }
     if (plugin.rowner && !isROwner) { fail('rowner', m, conn); return false; }
     if (plugin.owner && !isOwner) { fail('owner', m, conn); return false; }
@@ -260,7 +266,6 @@ function checkPluginRequirements(conn, m, plugin, { isROwner, isOwner, isMods, i
     if (plugin.botAdmin && !isBotAdmin) { fail('botAdmin', m, conn); return false; } 
     if (plugin.admin && !isAdmin) { fail('admin', m, conn); return false; }
     if (plugin.private && m.isGroup) { fail('private', m, conn); return false; }
-
 
     if (plugin.level > _user.level) {
         conn.reply(m.chat, `❮🐉❯ Se requiere el nivel: *${plugin.level}*\n\n• Tu nivel actual es: *${_user.level}*\n\n• Usa este comando para subir de nivel:\n*${usedPrefix}levelup*`, m);
@@ -274,11 +279,6 @@ function checkPluginRequirements(conn, m, plugin, { isROwner, isOwner, isMods, i
  * Lógica que se ejecuta al final del handler (cola, muteo, stats).
  */
 async function finalLogic(conn, m) {
-    if (opts['queque'] && m.text) {
-        const quequeIndex = conn.msgqueque.indexOf(m.id || m.key.id)
-        if (quequeIndex !== -1) conn.msgqueque.splice(quequeIndex, 1)
-    }
-
     if (m) { 
         let utente = global.db.data.users[m.sender]
         // Lógica de Muteo
@@ -291,14 +291,13 @@ async function finalLogic(conn, m) {
         // Lógica de Economía y XP
         if (m.sender && global.db.data.users[m.sender]) {
             global.db.data.users[m.sender].exp += m.exp
-            // Aseguramos que m.monedas es un número antes de restar
             global.db.data.users[m.sender].monedas -= (m.monedas ? m.monedas * 1 : 0)
         }
 
         // Lógica de Estadísticas
         if (m.plugin) {
             let now = +new Date
-            let stats = global.db.data.stats
+            let stats = global.db.data.stats || (global.db.data.stats = {});
             let stat = stats[m.plugin] = stats[m.plugin] || { total: 0, success: 0, last: now, lastSuccess: now };
 
             stat.total += 1
@@ -313,7 +312,7 @@ async function finalLogic(conn, m) {
     try {
         if (!opts['noprint']) await (await import('./utils/print.js')).default(m, conn)
     } catch (e) {
-        console.log(m, m.quoted, e)
+        console.error("Error en utils/print.js:", e)
     }
 
     if (opts['autoread']) await conn.readMessages([m.key])
@@ -325,53 +324,50 @@ async function finalLogic(conn, m) {
 // ===================================================
 
 export async function handler(chatUpdate) {
-    // Inicializa lógica de core (Auto-escribiendo y rechazo de llamadas)
+    // 1. Inicialización de Core (Auto-escribiendo/Rechazo)
     if (!this.presenceInitialized) {
         setupAutoWritingAndReject(this);
         this.presenceInitialized = true;
     }
-
+    
+    // 2. Control de Mensajes (Cola, Uptime)
     this.msgqueque = this.msgqueque || []
     this.uptime = this.uptime || Date.now()
-    if (!chatUpdate) return
+    if (!chatUpdate || !chatUpdate.messages || chatUpdate.messages.length === 0) return
     this.pushMessage(chatUpdate.messages).catch(console.error)
+
     let m = chatUpdate.messages[chatUpdate.messages.length - 1]
     if (!m) return;
     if (global.db.data == null) await global.loadDatabase()
 
     try {
+        // 3. Conversión del mensaje
         m = smsg(this, m) || m
         if (!m) return
+        if (m.isBaileys) return // Ignorar mensajes de Baileys
+        
         global.mconn = m
         m.exp = 0
         m.monedas = false
 
-        // 1. Inicialización de la Base de Datos (DB)
+        // 4. Inicialización de la Base de Datos (DB)
         await initializeDatabase(this, m);
 
         if (typeof m.text !== "string") m.text = ""
         const chat = global.db.data.chats[m.chat]
         globalThis.setting = global.db.data.settings[this.user.jid]
 
-        // 2. Definición de Roles y Permisos
+        // 5. Definición de Roles y Permisos
         const { isROwner, isOwner, isPrems, senderLid, botLid, user, bot, isRAdmin, isAdmin, isBotAdmin, participants, groupMetadata, isMods } = await defineRolesAndPermissions(this, m);
-
-        // 3. Lógica de Cola y Mensajes de Baileys
-        if (opts["queque"] && m.text && !(isMods)) {
-            const queque = this.msgqueque, time = 1000 * 5
-            const previousID = queque[queque.length - 1]
-            queque.push(m.id || m.key.id)
-            setInterval(async function () {
-                if (queque.indexOf(previousID) === -1) clearInterval(this)
-                await delay(time)
-            }, time)
-        }
-        if (m.isBaileys) return
+        let _user = global.db.data.users[m.sender];
+        
+        // 6. Filtros de Modo Self
+        if (global.db.data.settings[this.user.jid].self && !m.fromMe) return
+        if (global.db.data.settings[this.user.jid].self === false && !m.fromMe) return
+        
         m.exp += Math.ceil(Math.random() * 10)
-        let usedPrefix
-        let _user = global.db.data && global.db.data.users && global.db.data.users[m.sender]
-
-        // 4. Ejecución de Plugins
+        
+        // 7. Ejecución de Plugins
         for (let name in global.plugins) {
             let plugin = global.plugins[name]
             if (!plugin || plugin.disabled) continue
@@ -380,65 +376,46 @@ export async function handler(chatUpdate) {
             // -> Función .all()
             if (typeof plugin.all === 'function') {
                 try {
-                    // Pasamos la conexión 'this' como primer argumento para .all()
-                    await plugin.all.call(this, m, { chatUpdate, conn: this, __dirname: ___dirname, __filename }) 
+                    await plugin.all.call(this, m, { chatUpdate, conn: this, __dirname: ___dirname, __filename, participants, groupMetadata, isOwner, isROwner }) 
                 } catch (e) {
-                    console.error(e)
+                    console.error(`Error en .all() de ${name}:`, e)
                 }
             }
             if (!opts['restrict'] && plugin.tags && plugin.tags.includes('admin')) continue
 
             // -------------------------------------------------------------------------
             // 📌 CONTROL CRÍTICO DE LISTA BLANCA (WHITELIST)
-            // IGNORA TODOS LOS COMANDOS SI EL GRUPO NO ESTÁ EN allowedGroups, EXCEPTO LOS DE CONTROL.
             // -------------------------------------------------------------------------
             global.allowedGroups = global.allowedGroups || new Set();
-
             if (m.isGroup && !global.allowedGroups.has(m.chat)) {
-
-                // Comandos que SIEMPRE están permitidos para el Creador (Owner)
                 const allowedCommands = ['owner', 'addgrupo', 'removegrupo', 'addbotx', 'menu', 'menú', 'help']; 
-
-                // Si el comando es de Owner (tags: ['owner']) O es uno de los comandos de activación/menú
                 const isControlCommand = (plugin.tags && plugin.tags.includes('owner')) || 
                                          allowedCommands.some(cmd => plugin.command && (Array.isArray(plugin.command) ? plugin.command.includes(cmd) : plugin.command === cmd));
-
-                if (isControlCommand) {
-                    // Permitido: Solo el Owner/Moderador/etc. puede ver el menú o activar el grupo
-                } 
-                else {
-                    // Bloqueamos CUALQUIER otro plugin.
-                    continue; 
-                }
+                if (!isControlCommand) continue; 
             }
             // -------------------------------------------------------------------------
 
-
             // -> Comprobación de Prefijo y Comando
-            const { match, usedPrefix: prefixMatch, command, noPrefix, args, text, isAccept } = checkCommand(this, m, plugin);
+            const { match, usedPrefix, command, noPrefix, args, text, isAccept } = checkCommand(this, m, plugin);
 
             // -> Función .before()
             if (typeof plugin.before === 'function' && (match || m.text)) { 
                 const extraBefore = { match, conn: this, participants, groupMetadata, user, bot, isROwner, isOwner, isRAdmin, isAdmin, isBotAdmin, isPrems, chatUpdate, __dirname: ___dirname, __filename };
                 if (await plugin.before.call(this, m, extraBefore)) continue
             }
-            if (typeof plugin !== 'function' || !match || !(usedPrefix = prefixMatch) || !isAccept) continue;
+            if (typeof plugin !== 'function' || !match || !(usedPrefix) || !isAccept) continue;
 
             m.plugin = name
             global.comando = command
 
             // -> Comprobación de Baneos y Modo Admin
-            if (m.chat in global.db.data.chats || m.sender in global.db.data.users) {
-                const userDB = global.db.data.users[m.sender];
-                const chatDB = global.db.data.chats[m.chat];
-
-                if (chatDB?.isBanned && !isROwner && !['grupo-unbanchat.js'].includes(name)) return;
-
-                if (m.text && userDB?.banned && !isROwner && name !== 'owner-unbanuser.js') {
-                    // Usamos m.reply para que mencione al usuario baneado
-                    m.reply(`《🐉》@${m.sender.split('@')[0]} estás baneado/a, no puedes usar comandos en este bot!\n\n${userDB.bannedReason ? `☁️ Motivo: ${userDB.bannedReason}` : '🔮 *Motivo:* Sin Especificar'}\n\n> 👑 Si este Bot es cuenta oficial y tiene evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.`, null, { mentions: [m.sender] });
-                    return;
-                }
+            const userDB = global.db.data.users[m.sender];
+            const chatDB = global.db.data.chats[m.chat];
+            
+            if (chatDB?.isBanned && !isROwner && !['grupo-unbanchat.js'].includes(name)) return;
+            if (m.text && userDB?.banned && !isROwner && name !== 'owner-unbanuser.js') {
+                m.reply(`《🐉》@${m.sender.split('@')[0]} estás baneado/a, no puedes usar comandos en este bot!\n\n${userDB.bannedReason ? `☁️ Motivo: ${userDB.bannedReason}` : '🔮 *Motivo:* Sin Especificar'}`, null, { mentions: [m.sender] });
+                return;
             }
 
             let adminMode = global.db.data.chats[m.chat].modoadmin
@@ -448,41 +425,42 @@ export async function handler(chatUpdate) {
             // -> Comprobación de Requisitos (Roles y Economía)
             if (!checkPluginRequirements(this, m, plugin, { isROwner, isOwner, isMods, isPrems, isAdmin, isBotAdmin, _user, usedPrefix })) continue;
 
-            // -> Ejecución Final
+            // -> Ejecución Final del Plugin
             m.isCommand = true
             let xp = 'exp' in plugin ? parseInt(plugin.exp) : 10
             m.exp += xp
 
             let extra = { match, usedPrefix, noPrefix, args, command, text, conn: this, participants, groupMetadata, user, bot, isROwner, isOwner, isRAdmin, isAdmin, isBotAdmin, isPrems, chatUpdate, __dirname: ___dirname, __filename };
-            
             try {
-                await plugin.handle.call(this, m, extra); 
+                // El plugin real es la función exportada por defecto, la llamamos aquí.
+                await plugin.call(this, m, extra); 
+                m.error = false
             } catch (e) {
                 m.error = e;
-                console.error(chalk.red(`❌ ERROR DE EJECUCIÓN en ${name}:`), e);
-                this.reply(m.chat, format(e), m); 
+                console.error(chalk.red(`❌ Error al ejecutar el comando ${command} en ${name}:`), e);
+                m.reply(format(e));
+            } finally {
+                await finalLogic(this, m);
             }
         }
+
     } catch (e) {
-        m.error = e;
-        console.error(chalk.red('❌ ERROR EN HANDLER GLOBAL:'), e);
-        
+        console.error(chalk.red("Error General en Handler (Fuera de Plugin):"), e)
     } finally {
-        await finalLogic(this, m);
+        // Ejecutar guardado de DB al final
+        global.db.write()
     }
 }
 
-// Recarga del archivo handler.js
-let file = fileURLToPath(import.meta.url)
-watchFile(file, async () => {
-    unwatchFile(file)
-    console.log(chalk.redBright("Se actualizó 'handler.js'"))
-    delete import.meta.url
-    global.reloadHandler(false).catch(console.error)
-})
 
-// Exportación final que index.js espera
-export default {
-    handler,
-    // Otras propiedades si son necesarias
-}
+// ===================================================
+// 8. LÓGICA DE MONITOREO DE PLUGINS (Hot Reload)
+// ===================================================
+
+const file = join(path.dirname(fileURLToPath(import.meta.url)), 'handler.js')
+watchFile(file, () => {
+    unwatchFile(file)
+    console.log(chalk.redBright('«Update»'), chalk.greenBright(file))
+    // Recargar el handler
+    import(`${file}?update=${Date.now()}`)
+})

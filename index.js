@@ -28,12 +28,8 @@ import { mongoDB, mongoDBV2 } from './utils/mongoDB.js'
 import store from './utils/store.js'
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
-// ----------------------------------------------------
-// Importaciones para la validación de número de teléfono
-// ----------------------------------------------------
 const { PhoneNumberUtil } = pkg
 const phoneUtil = PhoneNumberUtil.getInstance()
-// ----------------------------------------------------
 const { DisconnectReason, useMultiFileAuthState, MessageRetryMap, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, jidNormalizedUser, Browsers } = await import('@whiskeysockets/baileys')
 import readline, { createInterface } from 'readline'
 import NodeCache from 'node-cache'
@@ -42,11 +38,10 @@ const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 // ===========================================
-// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO (CORREGIDA)
+// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO
 // ===========================================
 async function isValidPhoneNumber(phoneNumber) {
     if (typeof phoneNumber !== 'string') return false;
-    // Usa la instancia importada (phoneUtil) para la validación.
     try {
         const parsedNumber = phoneUtil.parseAndKeepRawInput(phoneNumber);
         return phoneUtil.isValidNumber(parsedNumber);
@@ -317,11 +312,14 @@ console.log(chalk.bold.redBright(`\n 🐉Conexión cerrada, conectese nuevamente
 }}}
 process.on('uncaughtException', console.error)
 let isInit = true
-let handler = await import('./handler.js')
+// **CORRECCIÓN:** Usamos global.handler para evitar el SyntaxError en la recarga
+global.handler = await import('./handler.js') 
+
 global.reloadHandler = async function(restatConn) {
 try {
 const Handler = await import(`./handler.js?update=${Date.now()}`).catch(console.error);
-if (Object.keys(Handler || {}).length) handler = Handler
+// **CORRECCIÓN:** Usamos global.handler para evitar la redeclaración
+if (Object.keys(Handler || {}).length) global.handler = Handler;
 } catch (e) {
 console.error(e);
 }
@@ -339,7 +337,7 @@ conn.ev.off('messages.upsert', conn.handler)
 conn.ev.off('connection.update', conn.connectionUpdate)
 conn.ev.off('creds.update', conn.credsUpdate)
 }
-conn.handler = handler.handler.bind(global.conn)
+conn.handler = global.handler.handler.bind(global.conn)
 conn.connectionUpdate = connectionUpdate.bind(global.conn)
 conn.credsUpdate = saveCreds.bind(global.conn, true)
 const currentDateTime = new Date()

@@ -28,8 +28,12 @@ import { mongoDB, mongoDBV2 } from './utils/mongoDB.js'
 import store from './utils/store.js'
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
+// ----------------------------------------------------
+// Importaciones para la validación de número de teléfono
+// ----------------------------------------------------
 const { PhoneNumberUtil } = pkg
 const phoneUtil = PhoneNumberUtil.getInstance()
+// ----------------------------------------------------
 const { DisconnectReason, useMultiFileAuthState, MessageRetryMap, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, jidNormalizedUser, Browsers } = await import('@whiskeysockets/baileys')
 import readline, { createInterface } from 'readline'
 import NodeCache from 'node-cache'
@@ -38,16 +42,16 @@ const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 // ===========================================
-// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO (Faltaba)
+// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO (CORREGIDA)
 // ===========================================
 async function isValidPhoneNumber(phoneNumber) {
-    if (typeof phoneNumber !== 'string') return;
+    if (typeof phoneNumber !== 'string') return false;
+    // Usa la instancia importada (phoneUtil) para la validación.
     try {
-        // Se carga de forma dinámica para evitar un crash si la importación falla
-        const { isPossibleNumber, isValidNumber } = await import('google-libphonenumber').catch(_ => ({}))
-        return isPossibleNumber?.(phoneNumber) && isValidNumber?.(phoneNumber)
+        const parsedNumber = phoneUtil.parseAndKeepRawInput(phoneNumber);
+        return phoneUtil.isValidNumber(parsedNumber);
     } catch (e) {
-        return false; // Retorna falso si hay un error al usar la librería
+        return false;
     }
 }
 // ===========================================

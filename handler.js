@@ -1,3 +1,4 @@
+// 📁 handler.js
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
 import { smsg } from './utils/simple.js';
 import { format } from 'util';
@@ -102,7 +103,7 @@ function loadPlugins() {
 }
 
 // Carga de plugins al inicio
-await loadPlugins(); // Usamos await aquí para esperar la carga
+await loadPlugins(); 
 console.log(chalk.yellow(`💡 Se cargaron ${Object.keys(global.plugins).length} plugins.`));
 
 
@@ -388,23 +389,24 @@ export async function handler(chatUpdate) {
 
             // -------------------------------------------------------------------------
             // 📌 CONTROL CRÍTICO DE LISTA BLANCA (WHITELIST)
+            // IGNORA TODOS LOS COMANDOS SI EL GRUPO NO ESTÁ EN allowedGroups, EXCEPTO LOS DE CONTROL.
             // -------------------------------------------------------------------------
             global.allowedGroups = global.allowedGroups || new Set();
 
             if (m.isGroup && !global.allowedGroups.has(m.chat)) {
                 
                 // Comandos que SIEMPRE están permitidos para el Creador (Owner)
-                const allowedCommands = ['owner', 'addgrupo', 'removegrupo', 'addbotx']; 
+                const allowedCommands = ['owner', 'addgrupo', 'removegrupo', 'addbotx', 'menu', 'menú', 'help']; 
                 
-                // Si el comando es de Owner (tags: ['owner']) O es uno de los comandos de activación
+                // Si el comando es de Owner (tags: ['owner']) O es uno de los comandos de activación/menú
                 const isControlCommand = (plugin.tags && plugin.tags.includes('owner')) || 
                                          allowedCommands.some(cmd => plugin.command && (Array.isArray(plugin.command) ? plugin.command.includes(cmd) : plugin.command === cmd));
                 
                 if (isControlCommand) {
-                    // Permitido: Solo el Owner puede ejecutar comandos de control
+                    // Permitido: Solo el Owner/Moderador/etc. puede ver el menú o activar el grupo
                 } 
                 else {
-                    // Bloqueamos CUALQUIER otro plugin, incluyendo el menú.
+                    // Bloqueamos CUALQUIER otro plugin.
                     continue; 
                 }
             }
@@ -432,8 +434,8 @@ export async function handler(chatUpdate) {
                 if (chatDB?.isBanned && !isROwner && !['grupo-unbanchat.js'].includes(name)) return;
                 
                 if (m.text && userDB?.banned && !isROwner && name !== 'owner-unbanuser.js') {
-                    // El mensaje de baneo usa m.reply, que ya lo menciona.
-                    m.reply(`《🐉》Estas baneado/a, no puedes usar comandos en este bot!\n\n${userDB.bannedReason ? `☁️ Motivo: ${userDB.bannedReason}` : '🔮 *Motivo:* Sin Especificar'}\n\n> 👑 Si este Bot es cuenta oficial y tiene evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.`);
+                    // Usamos m.reply para que mencione al usuario baneado
+                    m.reply(`《🐉》@${m.sender.split('@')[0]} estás baneado/a, no puedes usar comandos en este bot!\n\n${userDB.bannedReason ? `☁️ Motivo: ${userDB.bannedReason}` : '🔮 *Motivo:* Sin Especificar'}\n\n> 👑 Si este Bot es cuenta oficial y tiene evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.`, null, { mentions: [m.sender] });
                     return;
                 }
             }
@@ -489,32 +491,34 @@ export async function handler(chatUpdate) {
 
 
 // ===================================================
-// ⚠️ FUNCIÓN DE FALLO (DFAIL) - CORREGIDA
+// ⚠️ FUNCIÓN DE FALLO (DFAIL) - CORREGIDA CON MENCIÓN
 // ===================================================
 
 global.dfail = (type, m, conn) => {
 
     const msg = {
-        rowner: '🐉El comando solo puede ser usado por los creadores del bot SAIYAJIN☁️.',
-        owner: '🐉El comando solo puede ser usado por los desarrolladores del bot SAIYAJIN☁️.',
-        mods: '🐉El comando solo puede ser usado por los moderadores del bot SAIYAJIN☁️.',
-        premium: '🐉El comando solo puede ser usado por los usuarios premium SAIYAJIN☁️.',
-        group: '🐉El comando solo puede ser usado en grupos SAIYAJIN☁️.',
-        private: '🐉El comando solo puede ser usado al privado SAIYAJIN☁️.',
+        rowner: '🐉El comando solo puede ser usado por los **creadores** del bot SAIYAJIN☁️.',
+        owner: '🐉El comando solo puede ser usado por los **desarrolladores** del bot SAIYAJIN☁️.',
+        mods: '🐉El comando solo puede ser usado por los **moderadores** del bot SAIYAJIN☁️.',
+        premium: '🐉El comando solo puede ser usado por los **usuarios premium** SAIYAJIN☁️.',
+        group: '🐉El comando solo puede ser usado en **grupos** SAIYAJIN☁️.',
+        private: '🐉El comando solo puede ser usado **al privado** SAIYAJIN☁️.',
         botAdmin: `🐉Necesito ser **Administrador** para ejecutar el comando en este grupo SAIYAJIN☁️.`,
         admin: `🐉El comando es solo para **Administradores** del grupo SAIYAJIN☁️.`,
-        unreg: `Para usar el bot, debes registrarte con ${global.prefix[0]}reg (nombre.edad) SAIYAJIN☁️.`,
+        unreg: `Para usar el bot, @${m.sender.split('@')[0]} debes registrarte con ${global.prefix[0]}reg (nombre.edad) SAIYAJIN☁️.`,
     }
 
     const replyMsg = msg[type] || `⚠️ Error de permiso desconocido: ${type}`;
     
-    // **CORRECCIÓN CRÍTICA:** Uso de m.reply para asegurar la mención del remitente.
-    // Usar m.reply es mejor que conn.reply(m.chat, msg, m) porque m.reply ya existe en simple.js
+    // Si el mensaje incluye mención (como en 'unreg'), la mención se pasa como texto.
+    // Si el mensaje no incluye mención, m.reply lo gestiona como una respuesta que visualmente lo menciona.
+    const mentions = replyMsg.includes(`@${m.sender.split('@')[0]}`) ? [m.sender] : [];
+
     if (m && typeof m.reply === 'function') {
-        m.reply(replyMsg);
+        m.reply(replyMsg, null, { mentions });
     } else if (conn && typeof conn.reply === 'function') {
          // Fallback por si m.reply no está disponible
-        conn.reply(m.chat, replyMsg, m); 
+        conn.reply(m.chat, replyMsg, m, { mentions }); 
     } else {
         console.error(`[DFAIL FALLBACK] Error de permiso: ${type} en chat: ${m.chat}`);
     }

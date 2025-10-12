@@ -38,6 +38,37 @@ const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 
+// ===========================================
+// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO
+// ===========================================
+async function isValidPhoneNumber(phoneNumber) {
+    if (typeof phoneNumber !== 'string') return false;
+    try {
+        const parsedNumber = phoneUtil.parseAndKeepRawInput(phoneNumber);
+        return phoneUtil.isValidNumber(parsedNumber);
+    } catch (e) {
+        return false;
+    }
+}
+
+// ===========================================
+// FUNCIÓN redefineConsoleMethod (PARA FILTRAR MENSAJES DE ERROR DE BAILYS)
+// ===========================================
+function redefineConsoleMethod(methodName, filterStrings) {
+    const originalMethod = console[methodName];
+    if (typeof originalMethod === 'function') {
+        console[methodName] = function(...args) {
+            const message = args.map(arg => typeof arg === 'string' ? arg : format(arg)).join(' ');
+            if (filterStrings.some(filter => Buffer.from(message).toString('base64').includes(filter))) {
+                return; 
+            }
+            originalMethod.apply(console, args);
+        };
+    }
+}
+// ===========================================
+
+
 console.log(chalk.bold.blueBright(`
 ╔═══════════════════════════════════════╗
 ║   ⚡ VEGETA-BOT-MB ACTIVADO ⚡         ║
@@ -494,4 +525,8 @@ unlinkSync(`./${jadi}/${directorio}/${fileInDir}`)
 if (SBprekey.length === 0) {
 console.log(chalk.bold.green(`\nꕥ ☁️No hay archivos en ${jadi} para eliminar SAIYAJIN🐉.`))
 } else {
-console.log(chalk.bold.cyanBright(`\n⌦ 🐉👑Archivos de la carpeta ${jadi} han sido eliminados correctamente
+// LÍNEA CORREGIDA PARA CERRAR EL TEMPLATE STRING `
+console.log(chalk.bold.cyanBright(`\n⌦ 🐉👑Archivos de la carpeta ${jadi} han sido eliminados correctamente`))
+}}} catch (e) {
+console.error('Error en purgeSessionSB:', e);
+}}

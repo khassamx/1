@@ -325,6 +325,112 @@ if (name != 'grupo-unbanchat.js' && name != 'owner-exec.js' && name != 'owner-ex
 if (m.text && user.banned && !isROwner) {
 m.reply(`《🐉》Estas baneado/a, no puedes usar comandos en este bot!\n\n${user.bannedReason ? `☁️ Motivo: ${user.bannedReason}` : '🔮 *Motivo:* Sin Especificar'}\n\n> 👑 Si este Bot es cuenta oficial y tiene evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.`)
 return
+import fs from 'fs';
+import path from 'path';
+
+// ---------------------------
+// FUNCIONES DE AUTO-ESCRIBIENDO Y RECHAZO DE LLAMADAS
+// ---------------------------
+function setupAutoWritingAndReject(conn) {
+    if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
+
+    // Loop único para escribir en todos los chats activos
+    if (!global.autoEscribiendoLoop) {
+        global.autoEscribiendoLoop = true;
+
+        setInterval(async () => {
+            for (let chat of global.autoEscribiendo) {
+                try {
+                    await conn.sendPresenceUpdate('composing', chat);
+                    await new Promise(res => setTimeout(res, Math.floor(Math.random() * 3000) + 2000));
+                    await conn.sendPresenceUpdate('available', chat);
+                } catch (e) {
+                    console.error('❌ Error en presencia de', chat, e);
+                    global.autoEscribiendo.delete(chat);
+                }
+            }
+        }, 6000);
+    }
+
+    // Detectar y rechazar llamadas
+    if (!conn.callListenerAdded) {
+        conn.callListenerAdded = true;
+
+        conn.ev.on('call', async (call) => {
+            try {
+                const from = call?.from || call?.[0]?.from || call?.[0]?.participant;
+                if (!from) return;
+
+                console.log('📞 Llamada detectada de:', from);
+
+                if (typeof conn.rejectCall === 'function') {
+                    await conn.rejectCall(from);
+                    console.log('❌ Llamada rechazada automáticamente.');
+                } else {
+                    await conn.sendPresenceUpdate('unavailable', from);
+                }
+
+            } catch (e) {
+                console.error('❌ Error gestionando llamada:', e);
+            }
+        });
+    }
+}
+
+// ---------------------------
+// CARGAR TODOS LOS PLUGINS DE LA CARPETA plugins/
+// ---------------------------
+const pluginsDir = path.join('./plugins');
+
+function loadPlugins() {
+    const plugins = {};
+    const files = fs.readdirSync(pluginsDir);
+
+    for (let file of files) {
+        if (!file.endsWith('.js')) continue;
+
+        const pluginPath = path.join(pluginsDir, file);
+        try {
+            const plugin = require(pluginPath).default || require(pluginPath);
+            plugins[file] = plugin;
+            console.log(`✅ Plugin cargado: ${file}`);
+        } catch (e) {
+            console.error(`❌ Error cargando plugin ${file}:`, e);
+        }
+    }
+    return plugins;
+}
+
+const plugins = loadPlugins();
+
+// ---------------------------
+// HANDLER PRINCIPAL
+// ---------------------------
+export async function handler(m, { conn }) {
+    try {
+        // Registrar chat activo para auto-escribiendo
+        if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
+        if (m?.chat) global.autoEscribiendo.add(m.chat);
+
+        // Inicializar auto-escribiendo y rechazo de llamadas
+        setupAutoWritingAndReject(conn);
+
+        // Ejecutar todos los plugins cargados
+        for (let name in plugins) {
+            try {
+                const plugin = plugins[name];
+                // Cada plugin puede exportar handler(m, {conn})
+                if (typeof plugin === 'function') {
+                    await plugin(m, { conn });
+                }
+            } catch (e) {
+                console.error(`❌ Error ejecutando plugin ${name}:`, e);
+            }
+        }
+
+    } catch (e) {
+        console.error('❌ Error en handler principal:', e);
+    }
 }
 
 if (m.chat in global.db.data.chats || m.sender in global.db.data.users) {

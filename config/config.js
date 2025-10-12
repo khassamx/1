@@ -18,10 +18,10 @@ global.owner = [
   // <-- Número @s.whatsapp.net -->
   ['595984495031', '☆ 𝐶𝑟𝑒𝑎𝑑𝑜𝑟 ☆', true],
   ['5216641784469', 'BrayanOFC-Li', true],
-  ['90263687053350', 'Owner Secundario', true], // Añadido nombre por claridad
+  ['90263687053350', 'Owner Secundario', true], 
 
   // <-- Número @lid -->
-  // ['258892692984006', 'DevAlexJs', true], // Línea comentada, descomentar si es @lid
+  // ['258892692984006', 'DevAlexJs', true], 
 ];
 
 // Moderadores
@@ -53,7 +53,7 @@ global.vegetaJadibts = true // Activar/desactivar Jadibots
 // ===================================================
 
 global.packname = `⪛✰¨♱𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱` // Nombre del paquete de stickers
-global.author = '➳𝐁𝐫𝐚𝐲𝐚𝐧𝐎𝐅𝐂ღ' // Autor de los stickers (Añadido 'author' aquí)
+global.author = '➳𝐁𝐫𝐚𝐲𝐚𝐧𝐎𝐅𝐂ღ' // Autor de los stickers (Añadido para el plugin !sticker)
 global.botname = '*♱𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱♱*'
 global.dev = '© ⍴᥆ᥕᥱrᥱძ ᑲᥡ  ➳𝐁𝐫𝐚𝐲𝐚𝐧𝐎𝐅𝐂ღ'
 global.textbot = ' ➳𝐁𝐫𝐚𝐲𝐚𝐧𝐎𝐅𝐂❦ • P·:*¨♱𝚅𝙴𝙶𝙴𝚃𝙰-𝙱𝙾𝚃-𝙼𝙱♱ ¨*:·'
@@ -61,12 +61,12 @@ global.moneda = 'dragones'
 global.welcom1 = 'Edita Con #setwelcome'
 global.welcom2 = 'Edita Con #setbye'
 
-// URLs para imágenes (se recomienda usar Buffer si es local)
+// URLs para imágenes 
 global.banner = 'https://files.catbox.moe/j0z1kz.jpg'
 global.catalogo = 'https://files.catbox.moe/j0z1kz.jpg'
 
 // ===================================================
-// 🔗 ENLACES Y CONTACTO
+// 🔗 ENLACES Y CONTACTO (Corregido 'ch3' con https://)
 // ===================================================
 
 global.gp1 = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V'
@@ -75,6 +75,14 @@ global.channel = 'https://whatsapp.com/channel/0029VbAzCfhFHWpwREs2ZT0V'
 global.channel2 = 'https://whatsapp.com/channel/0029VbAfPu9BqbrEMFWXKE0d'
 global.md = 'https://githun.com/BrayanOFC/VEGETA-BOT-MB.git'
 global.correo = 'lourdesagueda93@gmail.com'
+
+global.ch = {
+  ch1: '120363394965381607@newsletter',
+  ch2: "120363394965381607@newsletter",
+  // ¡CORRECCIÓN CRÍTICA PARA EL BOTÓN !owner!
+  ch3: "https://instagram.com/kekofavero" // Asegurado que tenga 'https://'
+}
+
 
 // ===================================================
 // ⚙️ OTROS AJUSTES Y DEPENDENCIAS GLOBALES
@@ -92,23 +100,17 @@ global.estilo = {
       itemCount : -999999, 
       status: 1, 
       surface : 1, 
-      message: global.packname, // Usar global.packname
+      message: global.packname, 
       orderTitle: 'Bang', 
-      thumbnail: global.catalogo, // Usar global.catalogo (URL o Buffer)
+      thumbnail: global.catalogo, 
       sellerJid: '0@s.whatsapp.net'
     }
   }
 }
 
-global.ch = {
-  ch1: '120363394965381607@newsletter',
-  ch2: "120363394965381607@newsletter",
-  ch3: "instagram.com/kekofavero"
-}
-
 global.multiplier = 60 // Multiplicador de experiencia (XP)
 
-// Globalización de módulos para compatibilidad en plugins
+// Globalización de módulos para compatibilidad en plugins (moment es crítico para !ginfo)
 global.fs = fs
 global.fetch = fetch
 global.axios = axios

@@ -1,17 +1,17 @@
-// 📁 plugins/grupo-info.js
+// 📁 plugins/grupo-info.js (Versión con Date Nativo, más robusta)
 
-// Asumimos que global.moment está disponible desde config.js
-const handler = async (m, { conn, isOwner, isAdmin, isBotAdmin, participants, groupMetadata }) => {
+const handler = async (m, { conn, isOwner, participants, groupMetadata }) => {
     
     // 1. CHEQUEO DE REQUISITOS
     if (!m.isGroup) {
         return global.dfail('group', m, conn);
     }
     if (!isOwner) {
-        return global.dfail('owner', m, conn);
+        // Solo el Owner puede usarlo para obtener información sensible.
+        return global.dfail('owner', m, conn); 
     }
 
-    // 2. OBTENER METADATOS (ya vienen en el objeto 'groupMetadata', pero lo aseguramos)
+    // 2. OBTENER METADATOS
     if (!groupMetadata) {
         groupMetadata = await conn.groupMetadata(m.chat).catch(e => {
             console.error(e);
@@ -24,22 +24,36 @@ const handler = async (m, { conn, isOwner, isAdmin, isBotAdmin, participants, gr
     }
 
     const {
-        id,
         subject, // Nombre del grupo
-        creation, // Timestamp de creación del grupo
+        creation, // Timestamp de creación del grupo (en segundos)
     } = groupMetadata;
 
     // 3. CÁLCULO DE ESTADÍSTICAS
     const memberCount = participants.length;
     const adminCount = participants.filter(p => p.admin).length;
     
-    // 4. TIEMPO DESDE CREACIÓN
-    // Usamos el timestamp de creación del grupo
-    const createdDate = global.moment(creation * 1000).tz('America/Asuncion');
-    const timeSinceCreation = createdDate.fromNow(); // Hace X tiempo
-    const creationTimeText = createdDate.format('DD/MM/YYYY hh:mm:ss A');
+    // 4. TIEMPO DESDE CREACIÓN (Usando Date nativo para robustez)
+    const creationTimeMs = creation * 1000;
+    const creationDate = new Date(creationTimeMs);
     
-    // 5. ESTADO DEL BOT
+    // Formateo simple de fecha
+    const creationTimeText = creationDate.toLocaleString('es-ES', { 
+        year: 'numeric', month: '2-digit', day: '2-digit', 
+        hour: '2-digit', minute: '2-digit', second: '2-digit' 
+    });
+    
+    // Calcular tiempo transcurrido (días, horas, minutos)
+    const diff = Date.now() - creationTimeMs;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    const timeSinceCreation = `${days} días, ${hours} horas, ${minutes} minutos`;
+    
+    // 5. ESTADO DEL BOT (Determinar si el bot es Admin)
+    const bot = participants.find(p => p.id === conn.user.jid) || {};
+    const isBotAdmin = !!bot.admin;
+
     const botStatus = isBotAdmin ? '✅ Sí, el bot es ADMINISTRADOR.' : '❌ No, el bot NO es administrador.';
 
     // 6. CONSTRUCCIÓN DEL MENSAJE
@@ -48,18 +62,15 @@ const handler = async (m, { conn, isOwner, isAdmin, isBotAdmin, participants, gr
 │ 
 │ *Nombre:* ${subject}
 │ 
-│ *ID del Grupo:* ${id}
-│ 
-│ *Creado el:* ${creationTimeText}
-│ 
-│ *Tiempo desde Creación:* ${timeSinceCreation}
-│ 
 │ *Miembros Totales:* **${memberCount}**
 │ 
 │ *Administradores:* **${adminCount}**
 │ 
 │ *Estado del Bot:* ${botStatus}
 │
+│ *Creado el:* ${creationTimeText}
+│ 
+│ *Tiempo desde Creación:* ${timeSinceCreation}
 ╰───────────────
 `.trim();
 
@@ -73,7 +84,7 @@ const handler = async (m, { conn, isOwner, isAdmin, isBotAdmin, participants, gr
 handler.help = ['ginfo', 'groupinfo'];
 handler.tags = ['owner', 'grupo'];
 handler.command = ['ginfo', 'groupinfo'];
-handler.owner = true; // Solo el Owner puede usarlo
-handler.group = true; // Solo en grupos
+handler.owner = true; 
+handler.group = true; 
 
 export default handler;

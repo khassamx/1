@@ -78,9 +78,9 @@ let handler = async (m, { conn }) => {
   }
 }
 
-handler.help = ['menu']
-handler.tags = ['main']
-handler.command = ['menu', 'help', 'mallymenu', 'titanmenu']
+handler.help = ['p']
+handler.tags = ['o']
+handler.command = ['nu', 'hp', 'mallymenu', 'titanmenu']
 export default handler
 
 // Función para convertir uptime en texto

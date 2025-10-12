@@ -42,19 +42,16 @@ let handler = async (m, { conn }) => {
 ---------------------------------
 👥 *Grupos / Administración*
 💙 .kick @user
-💜 AntiLink: ${chat.antiLink ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
+💜 AntiLink: ${chat.antiLink ? '✅ ACTIVADO' : '❌ DESACTIVADO'} Está funciona no está activa 
 
 🎵 *Descargas / Multimedia*
-💚 .play
-💖 .pla2
 💙 .tiktok
-💜 .ig
 
 📞 *Creador / Contacto*
-💛 .owner
+💛 +595984495031
 
 📺 *Canal Oficial*  
-💚 ${rcanalw}
+💚 instagram.com/kekofavero
 `
 
     // Botones para activar/desactivar AntiLink

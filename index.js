@@ -1,4 +1,4 @@
-// index.js (VEGETA-BOT-MB - Versión Optimizada)
+// index.js (VEGETA-BOT-MB - Versión Optimizada FINAL)
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
 import './config/config.js'
 import { setupMaster, fork } from 'cluster'
@@ -19,17 +19,17 @@ import { protoType, serialize } from './utils/simple.js'
 import { Low, JSONFile } from 'lowdb'
 import store from './utils/store.js'
 import readline from 'readline'
-import { startConnection, connectionUpdate } from './lib/connection.js' // ⬅️ NUEVO MÓDULO
-import { isValidPhoneNumber, redefineConsoleMethod, reloadPlugins } from './utils/helper.js' // ⬅️ NUEVO MÓDULO
+import { startConnection, connectionUpdate } from './utils/connection.js' // ⬅️ IMPORTACIÓN DESDE UTILS
+import { isValidPhoneNumber, redefineConsoleMethod, reloadPlugins } from './utils/helper.js' // ⬅️ IMPORTACIÓN DESDE UTILS
 
 const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 // ===========================================
-// DEFINICIONES GLOBALES
+// 1. DEFINICIONES GLOBALES MÍNIMAS
 // ===========================================
-global.fs = fs // Hacemos fs global para lib/connection
-global.path = path // Hacemos path global para lib/connection
+global.fs = fs 
+global.path = path 
 global.store = store
 global.timestamp = { start: new Date }
 global.__filename = function filename(pathURL = import.meta.url, rmPrefix = platform !== 'win32') {
@@ -45,15 +45,14 @@ const __dirname = global.__dirname(import.meta.url)
 global.opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
 global.prefix = new RegExp('^[#!./]')
 
-// Opciones de colores
+// Opciones de colores e Input
 const colors = chalk.bold.blueBright 
 const qrOption = chalk.blueBright 
 const textOption = chalk.blueBright 
-
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 const question = (texto) => new Promise((resolver) => rl.question(texto, resolver))
 
-// Opciones para la función startConnection
+// Parámetros para la función startConnection
 const globalVariables = {
     global, rl, question, 
     methodCodeQR: process.argv.includes("qr"), 
@@ -65,7 +64,7 @@ const options = {
     MethodMobile: process.argv.includes("mobile"), colors, qrOption, textOption, isValidPhoneNumber
 }
 
-// Filtro de errores de Baileys
+// Filtro de errores de Baileys (Usando la función externa)
 const filterStrings = [
     "Q2xvc2luZyBzdGFsZSBvcGVu", "Q2xvc2luZyBvcGVuIHNlc3Npb24=", "RmFpbGVkIHRvIGRlY3J5cHQ=", 
     "U2Vzc2lvbiBlcnJvcg==", "RXJyb3I6IEJhZCBNQUM=", "RGVjcnlwdGVkIG1lc3NhZ2U="
@@ -75,13 +74,11 @@ console.debug = () => { }
 ['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
 
 // ===========================================
-// INICIALIZACIÓN DE BASE DE DATOS
+// 2. INICIALIZACIÓN DE BASE DE DATOS
 // ===========================================
 global.db = new Low(/https?:\/\//.test(opts['db'] || '') ? new cloudDBAdapter(opts['db']) : new JSONFile('database.json'))
 global.DATABASE = global.db; 
-
 global.loadDatabase = async function loadDatabase() {
-    // ... (Tu código de loadDatabase)
     if (global.db.READ) {
         return new Promise((resolve) => setInterval(async function() {
         if (!global.db.READ) {
@@ -102,7 +99,7 @@ global.loadDatabase = async function loadDatabase() {
 loadDatabase()
 
 // ===========================================
-// LÓGICA DE PLUGINS
+// 3. LÓGICA DEL HANDLER Y PLUGINS
 // ===========================================
 let isInit = true
 let handler = await import('./handler.js')
@@ -118,7 +115,6 @@ global.reloadHandler = async function(restatConn) {
         const oldChats = global.conn.chats
         try { global.conn.ws.close() } catch { }
         global.conn.ev.removeAllListeners()
-        // global.conn = await startConnection(...) // Ya lo hace startConnection internamente.
         isInit = true
     }
     if (!isInit) {
@@ -147,17 +143,18 @@ async function filesInit() {
     }
 }
 
-global.reload = reloadPlugins.bind(null, global.conn, global.handler, pluginFolder, pluginFilter) // Enlazamos la función externa
+// Enlazamos la función de recarga de plugins desde helper.js
+global.reload = reloadPlugins.bind(null, global.conn, global.handler, pluginFolder, pluginFilter)
 watch(pluginFolder, global.reload)
 
 // ===========================================
-// FUNCIÓN PRINCIPAL DE INICIO (ASYNC WRAPPER)
+// 4. FUNCIÓN PRINCIPAL DE INICIO
 // ===========================================
 async function startVEGETABot() {
     protoType()
     serialize()
     
-    // 🚨 Mostramos el mensaje de inicio
+    // Mensaje de bienvenida
     console.log(chalk.bold.blueBright(`
 ╔═══════════════════════════════════════╗
 ║   ⚡ VEGETA-BOT-MB ACTIVADO ⚡         ║
@@ -168,19 +165,21 @@ async function startVEGETABot() {
     console.log(chalk.bold.blueBright('║       Desarrollado por BrayanOFC 👑   ║'))
     console.log(chalk.bold.blueBright('╚═══════════════════════════════════════╝\n'))
 
-    // 🚨 Llamamos a la función de conexión externa
+    // 🚨 Llamada a la función de conexión externa
     await startConnection(globalVariables, { reloadHandler, connectionUpdate }, options)
 
     await filesInit()
     await global.reloadHandler()
     
-    // ... (El resto de tu lógica de intervalos y limpieza)
+    // Intervalo de guardado de DB y limpieza de TMP
     if (!opts['test']) {
         if (global.db) setInterval(async () => {
         if (global.db.data) await global.db.write()
         if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [tmpdir(), 'tmp', `${jadi}`], tmp.forEach((filename) => spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'], {stdio: 'inherit'})))
         }, 30 * 1000)
     }
+    
+    // Intervalo de reinicio (10800000 ms = 3 horas)
     setInterval(() => {
         console.log('[ 🐉 ]  Reiniciando...');
         process.exit(0)
@@ -190,8 +189,7 @@ async function startVEGETABot() {
     let rtU = join(__dirname, `./${jadi}`)
     if (!existsSync(rtU)) { mkdirSync(rtU, { recursive: true }) }
     global.rutaJadiBot = join(__dirname, `./${jadi}`)
-    // ... (Lógica de JadiBot - Se mantiene igual)
-    
+    // ... (El resto de la lógica de JadiBot, si existe)
 }
 
 // 🚨 Ejecución del Bot

@@ -525,8 +525,10 @@ unlinkSync(`./${jadi}/${directorio}/${fileInDir}`)
 if (SBprekey.length === 0) {
 console.log(chalk.bold.green(`\nꕥ ☁️No hay archivos en ${jadi} para eliminar SAIYAJIN🐉.`))
 } else {
-// LÍNEA CORREGIDA PARA CERRAR EL TEMPLATE STRING `
 console.log(chalk.bold.cyanBright(`\n⌦ 🐉👑Archivos de la carpeta ${jadi} han sido eliminados correctamente`))
-}}} catch (e) {
+} // <-- Corrección 1: Se cierra el else/if
+} catch (e) { // <-- Corrección 2: Ahora el catch está correcto
 console.error('Error en purgeSessionSB:', e);
-}}
+}
+// Corrección 3: Se cierra la función purgeSessionSB
+}

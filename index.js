@@ -1,6 +1,6 @@
 //adaptado para VEGETA-BOT-MB por BrayanOFC 
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
-import './ProcesadorVegeta/config.js' // RUTA MODIFICADA
+import './ProcesadorVegeta/config.js'
 import { setupMaster, fork } from 'cluster'
 import { watchFile, unwatchFile } from 'fs'
 import { createRequire } from 'module'
@@ -22,10 +22,10 @@ import pino from 'pino'
 import Pino from 'pino'
 import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
-import { makeWASocket, protoType, serialize } from './lib/simple.js' // RUTA MODIFICADA
+import { makeWASocket, protoType, serialize } from './utils/simple.js' // ⬅️ RUTA CORREGIDA: ./lib/simple.js -> ./utils/simple.js
 import { Low, JSONFile } from 'lowdb'
-import { mongoDB, mongoDBV2 } from './lib/mongoDB.js' // RUTA MODIFICADA
-import store from './lib/store.js' // RUTA MODIFICADA
+import { mongoDB, mongoDBV2 } from './utils/mongoDB.js' // ⬅️ RUTA CORREGIDA: ./lib/mongoDB.js -> ./utils/mongoDB.js
+import store from './utils/store.js' // ⬅️ RUTA CORREGIDA: ./lib/store.js -> ./utils/store.js
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
 const { PhoneNumberUtil } = pkg
@@ -38,7 +38,7 @@ const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 // ===========================================
-// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO (FALTABA EN EL CÓDIGO INICIAL)
+// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO
 // ===========================================
 async function isValidPhoneNumber(phoneNumber) {
     if (typeof phoneNumber !== 'string') return false;
@@ -51,7 +51,7 @@ async function isValidPhoneNumber(phoneNumber) {
 }
 
 // ===========================================
-// FUNCIÓN redefineConsoleMethod (FALTABA EN EL CÓDIGO INICIAL)
+// FUNCIÓN redefineConsoleMethod
 // ===========================================
 function redefineConsoleMethod(methodName, filterStrings) {
     const originalMethod = console[methodName];
@@ -218,11 +218,10 @@ conn.logger.info(`[ ✿ ]  H E C H O\n`)
 if (!opts['test']) {
 if (global.db) setInterval(async () => {
 if (global.db.data) await global.db.write()
-if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [tmpdir(), 'tmp', `${jadi}`], tmp.forEach((filename) => spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'], {stdio: 'inherit'}))) // CORRECCIÓN EN AUTOCLEARTMP
+if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [tmpdir(), 'tmp', `${jadi}`], tmp.forEach((filename) => spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'], {stdio: 'inherit'})))
 }, 30 * 1000)
 }
 
-// FUNCIONES LID (Se mantienen las funciones tal cual las enviaste, asumiendo que las necesitas)
 async function resolveLidToRealJid(lidJid, groupJid, maxRetries = 3, retryDelay = 1000) {
 if (!lidJid?.endsWith("@lid") || !groupJid?.endsWith("@g.us")) return lidJid?.includes("@") ? lidJid : `${lidJid}@s.whatsapp.net`
 const cached = lidCache.get(lidJid);
@@ -356,10 +355,10 @@ console.log(chalk.bold.redBright(`\n 🐉Conexión cerrada, conectese nuevamente
 }}}
 process.on('uncaughtException', console.error)
 let isInit = true
-let handler = await import('./ProcesadorVegeta/handler.js') // RUTA MODIFICADA
+let handler = await import('./ProcesadorVegeta/handler.js')
 global.reloadHandler = async function(restatConn) {
 try {
-const Handler = await import(`./ProcesadorVegeta/handler.js?update=${Date.now()}`).catch(console.error); // RUTA MODIFICADA
+const Handler = await import(`./ProcesadorVegeta/handler.js?update=${Date.now()}`).catch(console.error);
 if (Object.keys(Handler || {}).length) handler = Handler
 } catch (e) {
 console.error(e);
@@ -384,9 +383,9 @@ conn.credsUpdate = saveCreds.bind(global.conn, true)
 const currentDateTime = new Date()
 const messageDateTime = new Date(conn.ev)
 if (currentDateTime >= messageDateTime) {
-const chats = Object.entries(conn.conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
+const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
 } else {
-const chats = Object.entries(conn.conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
+const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
 }
 conn.ev.on('messages.upsert', conn.handler)
 conn.ev.on('connection.update', conn.connectionUpdate)
@@ -418,7 +417,7 @@ for (const gjbts of readRutaJadiBot) {
 const botPath = join(rutaJadiBot, gjbts)
 const readBotPath = readdirSync(botPath)
 if (readBotPath.includes(creds)) {
-vegetaJadiBot({JadiBot: botPath, m: null, conn, args: '', usedPrefix: '/', command: 'serbot'}) // CORRECCIÓN EN EL NOMBRE DE LA FUNCIÓN
+vegetaJadiBot({JadiBot: botPath, m: null, conn, args: '', usedPrefix: '/', command: 'serbot'})
 }}}}
 
 const pluginFolder = global.__dirname(join(__dirname, './plugins/index'))
@@ -462,8 +461,6 @@ global.plugins = Object.fromEntries(Object.entries(global.plugins).sort(([a], [b
 Object.freeze(global.reload)
 watch(pluginFolder, global.reload)
 await global.reloadHandler()
-
-// FUNCIÓN DE TESTEO DE HERRAMIENTAS (Se mantiene tal cual la enviaste)
 async function _quickTest() {
 const test = await Promise.all([
 spawn('ffmpeg'),
@@ -488,8 +485,6 @@ const [ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find] = test;
 const s = global.support = {ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find};
 Object.freeze(global.support);
 }
-
-// FUNCIÓN PARA LIMPIAR TEMPORALES (Se mantiene tal cual la enviaste)
 function clearTmp() {
 const tmpDir = join(__dirname, 'tmp')
 const filenames = readdirSync(tmpDir)
@@ -498,7 +493,6 @@ const filePath = join(tmpDir, file)
 unlinkSync(filePath)})
 }
 
-// FUNCIÓN PARA PURGAR SESIÓN PRINCIPAL (Se mantiene tal cual la enviaste)
 function purgeSession() {
 let prekey = []
 let directorio = readdirSync(`./${vegetasessions}`)
@@ -511,7 +505,6 @@ unlinkSync(`./${vegetasessions}/${files}`)
 })
 } 
 
-// FUNCIÓN PARA PURGAR SESIÓN JADIBOT (¡CORREGIDA COMPLETAMENTE!)
 function purgeSessionSB() {
 try {
 const listaDirectorios = readdirSync(`./${jadi}/`);
@@ -530,10 +523,9 @@ unlinkSync(`./${jadi}/${directorio}/${fileInDir}`)
 if (SBprekey.length === 0) {
 console.log(chalk.bold.green(`\nꕥ ☁️No hay archivos en ${jadi} para eliminar SAIYAJIN🐉.`))
 } else {
-// ¡AQUÍ ESTABA EL ERROR DE SINTAXIS! Ahora está completo.
 console.log(chalk.bold.cyanBright(`\n⌦ 🐉👑Archivos de la carpeta ${jadi} han sido eliminados correctamente`))
 }
 } catch (e) {
 console.error('Error en purgeSessionSB:', e);
 }
-} // <--- Cierre de la función purgeSessionSB
+}

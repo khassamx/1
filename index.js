@@ -38,7 +38,7 @@ const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 // ===========================================
-// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO
+// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO (AÑADIDA)
 // ===========================================
 async function isValidPhoneNumber(phoneNumber) {
     if (typeof phoneNumber !== 'string') return false;
@@ -47,6 +47,25 @@ async function isValidPhoneNumber(phoneNumber) {
         return phoneUtil.isValidNumber(parsedNumber);
     } catch (e) {
         return false;
+    }
+}
+// ===========================================
+
+// ===========================================
+// FUNCIÓN redefineConsoleMethod (AÑADIDA)
+// Esta función era llamada pero no estaba definida.
+// Se añade una versión simple para evitar el crash.
+// ===========================================
+function redefineConsoleMethod(methodName, filterStrings) {
+    const originalMethod = console[methodName];
+    if (typeof originalMethod === 'function') {
+        console[methodName] = function(...args) {
+            const message = args.map(arg => typeof arg === 'string' ? arg : format(arg)).join(' ');
+            if (filterStrings.some(filter => Buffer.from(message).toString('base64').includes(filter))) {
+                return; // Suprime mensajes que coinciden con el filtro
+            }
+            originalMethod.apply(console, args);
+        };
     }
 }
 // ===========================================
@@ -142,8 +161,8 @@ const filterStrings = [
 
 console.info = () => { }
 console.debug = () => { }
-// La función 'redefineConsoleMethod' no está definida, se comenta para evitar un crash
-// ['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
+// Ahora se llama correctamente a la función que se definió arriba
+['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
 
 const connectionOptions = {
 logger: pino({ level: 'silent' }),
@@ -203,15 +222,18 @@ conn.logger.info(`[ ✿ ]  H E C H O\n`)
 if (!opts['test']) {
 if (global.db) setInterval(async () => {
 if (global.db.data) await global.db.write()
-// Se comenta la línea de autocleartmp ya que usa variables no definidas (os, cp)
+// Se comentan las líneas de autocleartmp que causaban ReferenceError (variables os, cp, jadi)
 // if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [os.tmpdir(), 'tmp', `${jadi}`], tmp.forEach((filename) => cp.spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'])))
 }, 30 * 1000)
 }
 
+// ===========================================
+// SE SIMPLIFICA Y CORRIGE LA LÓGICA DE LID
+// La caché de LID no estaba definida, por lo que se retorna el JID.
+// ===========================================
 async function resolveLidToRealJid(lidJid, groupJid, maxRetries = 3, retryDelay = 1000) {
 if (!lidJid?.endsWith("@lid") || !groupJid?.endsWith("@g.us")) return lidJid?.includes("@") ? lidJid : `${lidJid}@s.whatsapp.net`
-// La variable lidCache no está definida en este archivo, retornamos el JID original para evitar el crash
-return lidJid
+return lidJid // Retorna el JID original si la caché no está definida.
 }
 
 async function extractAndProcessLids(text, groupJid) {
@@ -265,6 +287,7 @@ return messageCopy
 console.error('Error en processLidsInMessage:', e)
 return message
 }}
+// ===========================================
 
 async function connectionUpdate(update) {
 const {connection, lastDisconnect, isNewLogin} = update
@@ -312,13 +335,11 @@ console.log(chalk.bold.redBright(`\n 🐉Conexión cerrada, conectese nuevamente
 }}}
 process.on('uncaughtException', console.error)
 let isInit = true
-// **CORRECCIÓN:** Usamos global.handler para evitar el SyntaxError en la recarga
-global.handler = await import('./handler.js') 
+global.handler = await import('./handler.js') // Se carga globalmente para evitar ReferenceError en la recarga
 
 global.reloadHandler = async function(restatConn) {
 try {
 const Handler = await import(`./handler.js?update=${Date.now()}`).catch(console.error);
-// **CORRECCIÓN:** Usamos global.handler para evitar la redeclaración
 if (Object.keys(Handler || {}).length) global.handler = Handler;
 } catch (e) {
 console.error(e);
@@ -354,12 +375,10 @@ isInit = false
 return true
 }
 
-// Se mantiene el reinicio forzado si es lo que deseas (cada 3 horas)
 setInterval(() => {
 console.log('[ 🐉 ]  Reiniciando...');
 process.exit(0)
 }, 10800000)
-
 let rtU = join(__dirname, `./${jadi}`)
 if (!existsSync(rtU)) {
 mkdirSync(rtU, { recursive: true }) 

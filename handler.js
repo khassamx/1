@@ -38,7 +38,7 @@ function setupAutoWritingAndReject(conn) {
         conn.ev.on('messages.upsert', async ({ messages }) => {
             const chat = messages[0]?.key?.remoteJid;
             if (chat) {
-                global.autoEscribiendo.add(chat);
+                global.autoEscribiendo.add(chat); // CORREGIDO: Usando .add()
                 conn.sendPresenceUpdate('composing', chat).catch(() => global.autoEscribiendo.delete(chat));
                 
                 setTimeout(() => {
@@ -310,7 +310,7 @@ async function finalLogic(conn, m) {
 // ===================================================
 
 export async function handler(chatUpdate) {
-    // Inicializa lógica de core
+    // Inicializa lógica de core (Auto-escribiendo y rechazo de llamadas)
     if (!this.presenceInitialized) {
         setupAutoWritingAndReject(this);
         this.presenceInitialized = true;

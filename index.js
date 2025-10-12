@@ -412,9 +412,9 @@ async function mainBotLogic() {
     const currentDateTime = new Date()
     const messageDateTime = new Date(conn.ev)
     if (currentDateTime >= messageDateTime) {
-    const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
+    const chats = Object.entries(conn.conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
     } else {
-    const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
+    const chats = Object.entries(conn.conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
     }
     conn.ev.on('messages.upsert', conn.handler)
     conn.ev.on('connection.update', conn.connectionUpdate)
@@ -422,13 +422,6 @@ async function mainBotLogic() {
     isInit = false
     return true
     }
-    
-    // Eliminado el setInterval de reinicio forzado aquí, ya que el sistema de Anti-Crash lo maneja mejor.
-    /* setInterval(() => {
-    console.log('[ 🐉 ]  Reiniciando...');
-    process.exit(0)
-    }, 10800000) 
-    */
 
     let rtU = join(__dirname, `./${jadi}`)
     if (!existsSync(rtU)) {
@@ -538,7 +531,7 @@ async function mainBotLogic() {
     })
     } 
 
-    // ✅ FUNCIÓN CORREGIDA FINALMENTE ✅
+    // ✅ FUNCIÓN CORREGIDA ✅
     function purgeSessionSB() {
         try {
             const listaDirectorios = readdirSync(`./${jadi}/`);

@@ -387,23 +387,24 @@ export async function handler(chatUpdate) {
             if (!opts['restrict'] && plugin.tags && plugin.tags.includes('admin')) continue
 
             // -------------------------------------------------------------------------
-            // 📌 CONTROL CRÍTICO DE LISTA NEGRA (BLACKlIST)
+            // 📌 CONTROL CRÍTICO DE LISTA BLANCA (WHITELIST)
             // -------------------------------------------------------------------------
-            global.blockedgroups = global.blockedgroups || new Set();
-            if (m.isGroup && global.blockedgroups.has(m.chat)) {
-                // Comandos que siempre están permitidos incluso si el grupo está bloqueado
-                const allowedCommands = ['owner', 'addgrupo', 'addbotx', 'menu', 'help', 'menú', 'ayuda']; 
+            global.allowedGroups = global.allowedGroups || new Set();
+
+            if (m.isGroup && !global.allowedGroups.has(m.chat)) {
                 
-                // Si el plugin actual es de OWNER (siempre debe pasar)
-                if (plugin.tags && plugin.tags.includes('owner')) {
-                    // Permitido
-                } 
-                // Si el comando es uno de los comandos permitidos
-                else if (allowedCommands.some(cmd => plugin.command && (Array.isArray(plugin.command) ? plugin.command.includes(cmd) : plugin.command === cmd))) {
-                    // Permitido
+                // Comandos que SIEMPRE están permitidos para el Creador (Owner)
+                const allowedCommands = ['owner', 'addgrupo', 'removegrupo', 'addbotx']; 
+                
+                // Si el comando es de Owner (tags: ['owner']) O es uno de los comandos de activación
+                const isControlCommand = (plugin.tags && plugin.tags.includes('owner')) || 
+                                         allowedCommands.some(cmd => plugin.command && (Array.isArray(plugin.command) ? plugin.command.includes(cmd) : plugin.command === cmd));
+                
+                if (isControlCommand) {
+                    // Permitido: Solo el Owner puede ejecutar comandos de control
                 } 
                 else {
-                    // Bloqueamos cualquier otro plugin en un grupo bloqueado.
+                    // Bloqueamos CUALQUIER otro plugin, incluyendo el menú.
                     continue; 
                 }
             }
@@ -431,6 +432,7 @@ export async function handler(chatUpdate) {
                 if (chatDB?.isBanned && !isROwner && !['grupo-unbanchat.js'].includes(name)) return;
                 
                 if (m.text && userDB?.banned && !isROwner && name !== 'owner-unbanuser.js') {
+                    // El mensaje de baneo usa m.reply, que ya lo menciona.
                     m.reply(`《🐉》Estas baneado/a, no puedes usar comandos en este bot!\n\n${userDB.bannedReason ? `☁️ Motivo: ${userDB.bannedReason}` : '🔮 *Motivo:* Sin Especificar'}\n\n> 👑 Si este Bot es cuenta oficial y tiene evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.`);
                     return;
                 }
@@ -506,9 +508,13 @@ global.dfail = (type, m, conn) => {
 
     const replyMsg = msg[type] || `⚠️ Error de permiso desconocido: ${type}`;
     
-    // **CORRECCIÓN CRÍTICA:** Uso seguro de conn.reply (para evitar el TypeError)
-    if (conn && typeof conn.reply === 'function') {
-        conn.reply(m.chat, replyMsg, m);
+    // **CORRECCIÓN CRÍTICA:** Uso de m.reply para asegurar la mención del remitente.
+    // Usar m.reply es mejor que conn.reply(m.chat, msg, m) porque m.reply ya existe en simple.js
+    if (m && typeof m.reply === 'function') {
+        m.reply(replyMsg);
+    } else if (conn && typeof conn.reply === 'function') {
+         // Fallback por si m.reply no está disponible
+        conn.reply(m.chat, replyMsg, m); 
     } else {
         console.error(`[DFAIL FALLBACK] Error de permiso: ${type} en chat: ${m.chat}`);
     }

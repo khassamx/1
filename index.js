@@ -1,6 +1,6 @@
 //adaptado para VEGETA-BOT-MB por BrayanOFC 
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
-import './ProcesadorVegeta/config.js'
+import './config/config.js' // ⬅️ RUTA CORREGIDA: Apunta a ./config/config.js
 import { setupMaster, fork } from 'cluster'
 import { watchFile, unwatchFile } from 'fs'
 import { createRequire } from 'module'
@@ -22,10 +22,10 @@ import pino from 'pino'
 import Pino from 'pino'
 import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
-import { makeWASocket, protoType, serialize } from './utils/simple.js' // ⬅️ RUTA CORREGIDA: './utils/'
+import { makeWASocket, protoType, serialize } from './utils/simple.js' // ⬅️ RUTA CORREGIDA: Apunta a ./utils/simple.js
 import { Low, JSONFile } from 'lowdb'
-import { mongoDB, mongoDBV2 } from './utils/mongoDB.js' // ⬅️ RUTA CORREGIDA: './utils/'
-import store from './utils/store.js' // ⬅️ RUTA CORREGIDA: './utils/'
+import { mongoDB, mongoDBV2 } from './utils/mongoDB.js' // ⬅️ RUTA CORREGIDA: Apunta a ./utils/mongoDB.js
+import store from './utils/store.js' // ⬅️ RUTA CORREGIDA: Apunta a ./utils/store.js
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
 const { PhoneNumberUtil } = pkg
@@ -121,7 +121,7 @@ global.db.chain = chain(global.db.data)
 }
 loadDatabase()
 
-// 📌 CORRECCIÓN CLAVE: Asegura que la ruta de la sesión no sea 'undefined'.
+// 📌 CORRECCIÓN: Asegura que la ruta de la sesión no sea 'undefined'.
 global.vegetasessions = global.vegetasessions || 'vegetasessions'; 
 const {state, saveState, saveCreds} = await useMultiFileAuthState(global.vegetasessions)
 const msgRetryCounterMap = new Map()
@@ -357,10 +357,10 @@ console.log(chalk.bold.redBright(`\n 🐉Conexión cerrada, conectese nuevamente
 }}}
 process.on('uncaughtException', console.error)
 let isInit = true
-let handler = await import('./ProcesadorVegeta/handler.js')
+let handler = await import('./handler.js') // ⬅️ RUTA CORREGIDA: Apunta a handler.js en la raíz de MALLY
 global.reloadHandler = async function(restatConn) {
 try {
-const Handler = await import(`./ProcesadorVegeta/handler.js?update=${Date.now()}`).catch(console.error);
+const Handler = await import(`./handler.js?update=${Date.now()}`).catch(console.error); // ⬅️ RUTA CORREGIDA
 if (Object.keys(Handler || {}).length) handler = Handler
 } catch (e) {
 console.error(e);

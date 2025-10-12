@@ -1,68 +1,76 @@
-// 📁 plugins/MIMI-Antilink.js
-// 💜 MIMI ver. BTS — Protección AntiLink con encanto idol 🌸
+// 📁 plugins/antilink.js
 
-let handler = async (m, { conn, usedPrefix, args, isAdmin, isBotAdmin }) => {
-  try {
-    if (!m.isGroup)
-      return m.reply(`⚠️ Este comando solo puede usarse en grupos, oppa~ 💜`);
+// ===================================================
+// 🧠 CONSTANTES Y EXPRESIONES REGULARES
+// ===================================================
 
-    if (!isAdmin)
-      return m.reply(`🚫 Lo siento, solo los *administradores* pueden activar o desactivar el modo AntiLink 😿`);
+// Regex para enlaces de invitación a grupos de WhatsApp
+const groupLinkRegex = /chat.whatsapp.com\/(?:invite\/)?([0-9A-Za-z]{20,24})/i
 
-    if (!args[0] || !['on', 'off'].includes(args[0].toLowerCase())) {
-      return m.reply(`
-🎀 *Modo AntiLink — MIMI ver. BTS* 💜
+// Regex para enlaces de canales de WhatsApp
+const channelLinkRegex = /whatsapp.com\/channel\/([0-9A-Za-z]+)/i
 
-✨ Protege el grupo eliminando enlaces molestos 🌸
 
-🧭 Uso correcto:
-• ${usedPrefix}antilink on  → Activar AntiLink  
-• ${usedPrefix}antilink off → Desactivar AntiLink
+// ===================================================
+// 🎯 FUNCIÓN PRINCIPAL (HANDLER.BEFORE)
+// ===================================================
 
-💬 Ejemplo:
-${usedPrefix}antilink on
+/**
+ * Se ejecuta antes de procesar el mensaje, ideal para moderación.
+ */
+export async function before(m, { conn, isAdmin, isBotAdmin }) {
+    // 1. CHEQUEOS PREVIOS RÁPIDOS
+    if (!m || !m.text) return true
+    if (m.isBaileys && m.fromMe) return true
+    if (!m.isGroup) return false
+    
+    // Si el bot no es admin, no puede aplicar la regla (expulsar/eliminar mensaje)
+    if (!isBotAdmin) return true 
 
-💜 *MIMI cuidará el chat como una buena idol manager~!* 🎤
-      `.trim())
+    // 2. CONFIGURACIÓN DEL CHAT
+    let chat = global.db?.data?.chats?.[m.chat]
+    if (!chat || !chat.antiLink) return true // Si AntiLink está desactivado, salimos.
+
+    // 3. DETECCIÓN DE ENLACES
+    let isGroupLink = m.text.match(groupLinkRegex)
+    let isChannelLink = m.text.match(channelLinkRegex)
+
+    // Si se detecta un enlace y el emisor NO es administrador del grupo
+    if ((isGroupLink || isChannelLink) && !isAdmin) {
+
+        // 4. VERIFICACIÓN DE EXCEPCIÓN (Link del grupo actual)
+        if (isGroupLink && isBotAdmin) {
+            try {
+                // Obtenemos el link actual del grupo para no auto-expulsar
+                const linkThisGroup = `https://chat.whatsapp.com/${await conn.groupInviteCode(m.chat)}`
+                if (m.text.includes(linkThisGroup)) return true // Permitir el link del propio grupo
+            } catch (error) {
+                console.error("[ERROR ANTI-LINK] No se pudo obtener el código del grupo:", error)
+                // Continuamos la ejecución si falla, es mejor fallar en la excepción que en la regla
+            }
+        }
+        
+        // --- 5. APLICACIÓN DE LA REGLA ---
+        const linkType = isChannelLink ? 'canales' : 'otros grupos';
+
+        // Notificación de expulsión
+        await conn.reply(m.chat, 
+            `> ✦ Se ha eliminado a @${m.sender.split`@`[0]} del grupo por \`Anti-Link\`! No permitimos enlaces de ${linkType}.`, 
+            null, 
+            { mentions: [m.sender] }
+        )
+
+        // Acción: Eliminar mensaje y Expulsar usuario
+        if (isBotAdmin) {
+            try {
+                await conn.sendMessage(m.chat, { delete: m.key })
+                await conn.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
+                console.log(`[ANTI-LINK] Usuario ${m.sender} eliminado del grupo ${m.chat} por publicar link de ${linkType}.`)
+            } catch (error) {
+                console.error("[ERROR ANTI-LINK] No se pudo eliminar el mensaje o expulsar al usuario:", error)
+            }
+        }
     }
-
-    // Inicializa base de datos si no existe
-    if (!global.db) global.db = {}
-    if (!global.db.data) global.db.data = {}
-    if (!global.db.data.chats) global.db.data.chats = {}
-
-    const chatData = global.db.data.chats[m.chat] || {}
-    const action = args[0].toLowerCase()
-
-    if (action === 'on') {
-      chatData.antiLink = true
-      await conn.sendMessage(
-        m.chat,
-        { text: `💜 Modo AntiLink ACTIVADO 🌸\n\nMIMI ahora protegerá el grupo con toda su energía idol~ 🎶` },
-        { quoted: m }
-      )
-    } else {
-      chatData.antiLink = false
-      await conn.sendMessage(
-        m.chat,
-        { text: `❌ Modo AntiLink DESACTIVADO 💫\n\nMIMI dejará que todos compartan libremente~ 🎤` },
-        { quoted: m }
-      )
-    }
-
-    global.db.data.chats[m.chat] = chatData
-
-  } catch (e) {
-    console.error('💔 Error en MIMI-Antilink.js:', e)
-    await m.reply(`😿 *Ups... algo salió mal, oppa~*\n\n🔧 Error: ${e.message}\n\n💜 MIMI lo arreglará pronto, ne~ 🌸`)
-  }
+    
+    return true
 }
-
-handler.help = ['antilink on/off']
-handler.tags = ['grupo', 'admin']
-handler.command = ['antilink', 'antilinks']
-handler.group = true
-handler.admin = true
-handler.botAdmin = true
-
-export default handler

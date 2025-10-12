@@ -22,10 +22,10 @@ import pino from 'pino'
 import Pino from 'pino'
 import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
-import { makeWASocket, protoType, serialize } from './utils/simple.js' // ⬅️ RUTA CORREGIDA: ./lib/simple.js -> ./utils/simple.js
+import { makeWASocket, protoType, serialize } from './utils/simple.js' // ⬅️ RUTA CORREGIDA: './utils/'
 import { Low, JSONFile } from 'lowdb'
-import { mongoDB, mongoDBV2 } from './utils/mongoDB.js' // ⬅️ RUTA CORREGIDA: ./lib/mongoDB.js -> ./utils/mongoDB.js
-import store from './utils/store.js' // ⬅️ RUTA CORREGIDA: ./lib/store.js -> ./utils/store.js
+import { mongoDB, mongoDBV2 } from './utils/mongoDB.js' // ⬅️ RUTA CORREGIDA: './utils/'
+import store from './utils/store.js' // ⬅️ RUTA CORREGIDA: './utils/'
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
 const { PhoneNumberUtil } = pkg
@@ -121,6 +121,8 @@ global.db.chain = chain(global.db.data)
 }
 loadDatabase()
 
+// 📌 CORRECCIÓN CLAVE: Asegura que la ruta de la sesión no sea 'undefined'.
+global.vegetasessions = global.vegetasessions || 'vegetasessions'; 
 const {state, saveState, saveCreds} = await useMultiFileAuthState(global.vegetasessions)
 const msgRetryCounterMap = new Map()
 const msgRetryCounterCache = new NodeCache({ stdTTL: 0, checkperiod: 0 })
@@ -139,12 +141,12 @@ let opcion
 if (methodCodeQR) {
 opcion = '1'
 }
-if (!methodCodeQR && !methodCode && !fs.existsSync(`./${vegetasessions}/creds.json`)) {
+if (!methodCodeQR && !methodCode && !fs.existsSync(`./${global.vegetasessions}/creds.json`)) {
 do {
 opcion = await question(colors("Seleccione una opción:\n") + qrOption("1. 👑Con código QR🐉\n") + textOption("2. ☁️Con código de texto de 8 dígitos🐉\n--> "))
 if (!/^[1-2]$/.test(opcion)) {
 console.log(chalk.bold.redBright(`☁️No se permiten numeros que no sean 1 o 2, tampoco letras o símbolos especiales SAIYAJIN🔮🐉.`))
-}} while (opcion !== '1' && opcion !== '2' || fs.existsSync(`./${vegetasessions}/creds.json`))
+}} while (opcion !== '1' && opcion !== '2' || fs.existsSync(`./${global.vegetasessions}/creds.json`))
 } 
 
 const filterStrings = [
@@ -190,7 +192,7 @@ maxIdleTimeMs: 60000,
 }
 
 global.conn = makeWASocket(connectionOptions)
-if (!fs.existsSync(`./${vegetasessions}/creds.json`)) {
+if (!fs.existsSync(`./${global.vegetasessions}/creds.json`)) {
 if (opcion === '2' || methodCode) {
 opcion = '2'
 if (!conn.authState.creds.registered) {
@@ -495,13 +497,13 @@ unlinkSync(filePath)})
 
 function purgeSession() {
 let prekey = []
-let directorio = readdirSync(`./${vegetasessions}`)
+let directorio = readdirSync(`./${global.vegetasessions}`)
 let filesFolderPreKeys = directorio.filter(file => {
 return file.startsWith('pre-key-')
 })
 prekey = [...prekey, ...filesFolderPreKeys]
 filesFolderPreKeys.forEach(files => {
-unlinkSync(`./${vegetasessions}/${files}`)
+unlinkSync(`./${global.vegetasessions}/${files}`)
 })
 } 
 

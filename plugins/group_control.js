@@ -1,9 +1,9 @@
-// 📁 plugins/group_control.js
+// 📁 plugins/group_control.js (Lógica de Lista Blanca)
 
 const handler = async (m, { conn, args, usedPrefix, command, isOwner }) => {
     
     if (!isOwner) {
-        return m.reply('Este comando es solo para mi Creador.');
+        return m.reply('Este comando es solo para mi Creador (Owner).');
     }
 
     if (!m.isGroup) {
@@ -11,30 +11,30 @@ const handler = async (m, { conn, args, usedPrefix, command, isOwner }) => {
     }
 
     const chatId = m.chat;
-    // Asegurarse de que global.blockedgroups exista
-    global.blockedgroups = global.blockedgroups || new Set();
+    // CRÍTICO: Usamos allowedGroups (grupos permitidos)
+    global.allowedGroups = global.allowedGroups || new Set();
 
     if (command === 'addgrupo') {
-        // Función: BLOQUEAR el grupo (el bot NO responderá comandos)
-        if (global.blockedgroups.has(chatId)) {
-            return m.reply('⚠️ Este grupo ya estaba bloqueado (Blacklist).');
+        // Función: ACTIVAR el grupo (el bot SÍ responderá comandos)
+        if (global.allowedGroups.has(chatId)) {
+            return m.reply('⚠️ Este grupo ya estaba activo. El bot ya puede ser usado.');
         }
-        global.blockedgroups.add(chatId);
-        m.reply(`✅ Grupo agregado a la lista negra (Blacklist). A partir de ahora, NO responderé comandos aquí. Usa ${usedPrefix}addbotx para reactivarme.`);
+        global.allowedGroups.add(chatId);
+        m.reply(`✅ Grupo activado. Ahora SÍ responderé comandos aquí. Usa ${usedPrefix}removegrupo para desactivarme.`);
         
-    } else if (command === 'addbotx') {
-        // Función: DESBLOQUEAR el grupo (el bot SÍ responderá comandos)
-        if (!global.blockedgroups.has(chatId)) {
-            return m.reply('⚠️ Este grupo no estaba en la lista negra (Blacklist).');
+    } else if (command === 'removegrupo' || command === 'addbotx') {
+        // Función: DESACTIVAR el grupo (el bot NO responderá comandos)
+        if (!global.allowedGroups.has(chatId)) {
+            return m.reply('⚠️ Este grupo no estaba activo.');
         }
-        global.blockedgroups.delete(chatId);
-        m.reply(`✅ Grupo eliminado de la lista negra. Ahora SÍ responderé comandos aquí. Usa ${usedPrefix}addgrupo para desactivarme.`);
+        global.allowedGroups.delete(chatId);
+        m.reply(`✅ Grupo desactivado. A partir de ahora, NO responderé comandos aquí, incluyendo el menú. Solo responderé a los comandos de activación/desactivación.`);
     }
 };
 
-handler.help = ['addgrupo', 'addbotx'];
+handler.help = ['addgrupo', 'removegrupo'];
 handler.tags = ['owner'];
-handler.command = ['addgrupo', 'addbotx'];
-handler.owner = true; // Solo el owner puede usarlo
+handler.command = ['addgrupo', 'removegrupo', 'addbotx']; // Añadimos addbotx como alias de remuevo
+handler.owner = true; 
 
 export default handler;

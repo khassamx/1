@@ -1,5 +1,7 @@
 //adaptado para VEGETA-BOT-MB por BrayanOFC 
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
 import './config/config.js'
+import { setupMaster, fork } from 'cluster'
 import { watchFile, unwatchFile } from 'fs'
 import { createRequire } from 'module'
 import { fileURLToPath, pathToFileURL } from 'url'
@@ -34,37 +36,7 @@ import NodeCache from 'node-cache'
 const { CONNECTING } = ws
 const { chain } = lodash
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
-process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
 
-// ===========================================
-// FUNCIÓN PARA VALIDAR NÚMERO DE TELÉFONO
-// ===========================================
-async function isValidPhoneNumber(phoneNumber) {
-    if (typeof phoneNumber !== 'string') return false;
-    try {
-        const parsedNumber = phoneUtil.parseAndKeepRawInput(phoneNumber);
-        return phoneUtil.isValidNumber(parsedNumber);
-    } catch (e) {
-        return false;
-    }
-}
-
-// ===========================================
-// FUNCIÓN redefineConsoleMethod (PARA FILTRAR MENSAJES DE ERROR DE BAILYS)
-// ===========================================
-function redefineConsoleMethod(methodName, filterStrings) {
-    const originalMethod = console[methodName];
-    if (typeof originalMethod === 'function') {
-        console[methodName] = function(...args) {
-            const message = args.map(arg => typeof arg === 'string' ? arg : format(arg)).join(' ');
-            if (filterStrings.some(filter => Buffer.from(message).toString('base64').includes(filter))) {
-                return; 
-            }
-            originalMethod.apply(console, args);
-        };
-    }
-}
-// ===========================================
 
 console.log(chalk.bold.blueBright(`
 ╔═══════════════════════════════════════╗
@@ -147,12 +119,12 @@ console.log(chalk.bold.redBright(`☁️No se permiten numeros que no sean 1 o 2
 } 
 
 const filterStrings = [
-"Q2xvc2luZyBzdGFsZSBvcGVu", 
-"Q2xvc2luZyBvcGVuIHNlc3Npb24=", 
-"RmFpbGVkIHRvIGRlY3J5cHQ=", 
-"U2Vzc2lvbiBlcnJvcg==", 
-"RXJyb3I6IEJhZCBNQUM=", 
-"RGVjcnlwdGVkIG1lc3NhZ2U=" 
+"Q2xvc2luZyBzdGFsZSBvcGVu", // "Closing stable open"
+"Q2xvc2luZyBvcGVuIHNlc3Npb24=", // "Closing open session"
+"RmFpbGVkIHRvIGRlY3J5cHQ=", // "Failed to decrypt"
+"U2Vzc2lvbiBlcnJvcg==", // "Session error"
+"RXJyb3I6IEJhZCBNQUM=", // "Error: Bad MAC" 
+"RGVjcnlwdGVkIG1lc3NhZ2U=" // "Decrypted message" 
 ]
 
 console.info = () => { }
@@ -217,12 +189,43 @@ conn.logger.info(`[ ✿ ]  H E C H O\n`)
 if (!opts['test']) {
 if (global.db) setInterval(async () => {
 if (global.db.data) await global.db.write()
+if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [os.tmpdir(), 'tmp', `${jadi}`], tmp.forEach((filename) => cp.spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'])))
 }, 30 * 1000)
 }
 
 async function resolveLidToRealJid(lidJid, groupJid, maxRetries = 3, retryDelay = 1000) {
 if (!lidJid?.endsWith("@lid") || !groupJid?.endsWith("@g.us")) return lidJid?.includes("@") ? lidJid : `${lidJid}@s.whatsapp.net`
-return lidJid 
+const cached = lidCache.get(lidJid);
+if (cached) return cached;
+const lidToFind = lidJid.split("@")[0];
+let attempts = 0
+while (attempts < maxRetries) {
+try {
+const metadata = await conn.groupMetadata(groupJid)
+if (!metadata?.participants) throw new Error("No se obtuvieron participantes")
+for (const participant of metadata.participants) {
+try {
+if (!participant?.jid) continue
+const contactDetails = await conn.onWhatsApp(participant.jid)
+if (!contactDetails?.[0]?.lid) continue
+const possibleLid = contactDetails[0].lid.split("@")[0]
+if (possibleLid === lidToFind) {
+lidCache.set(lidJid, participant.jid)
+return participant.jid
+}} catch (e) {
+continue
+}}
+lidCache.set(lidJid, lidJid)
+return lidJid
+} catch (e) {
+attempts++
+if (attempts >= maxRetries) {
+lidCache.set(lidJid, lidJid)
+return lidJid
+}
+await new Promise(resolve => setTimeout(resolve, retryDelay))
+}}
+return lidJid
 }
 
 async function extractAndProcessLids(text, groupJid) {
@@ -294,6 +297,7 @@ console.log(chalk.green.bold(` 👑Escanea este código QR☁️`))}
 if (connection === "open") {
 const userJid = jidNormalizedUser(conn.user.id)
 const userName = conn.user.name || conn.user.verifiedName || "Desconocido"
+//await joinChannels(conn)
 console.log(chalk.green.bold(` 🐉Conectado a: ${userName}☁️`))
 }
 let reason = new Boom(lastDisconnect?.error)?.output?.statusCode
@@ -320,21 +324,16 @@ await global.reloadHandler(true).catch(console.error)
 } else {
 console.log(chalk.bold.redBright(`\n 🐉Conexión cerrada, conectese nuevamente SAIYAJIN☁️.`))
 }}}
-
 process.on('uncaughtException', console.error)
 let isInit = true
-// **IMPORTANTE: global.handler se declara aquí, pero se asigna DENTRO de reloadHandler
-global.handler = {} 
-
+let handler = await import('./handler.js')
 global.reloadHandler = async function(restatConn) {
 try {
-// Carga el handler de forma asíncrona usando un timestamp para evitar caché
 const Handler = await import(`./handler.js?update=${Date.now()}`).catch(console.error);
-if (Object.keys(Handler || {}).length) global.handler = Handler;
+if (Object.keys(Handler || {}).length) handler = Handler
 } catch (e) {
-console.error("Error al cargar handler.js:", e);
+console.error(e);
 }
-
 if (restatConn) {
 const oldChats = global.conn.chats
 try {
@@ -349,20 +348,9 @@ conn.ev.off('messages.upsert', conn.handler)
 conn.ev.off('connection.update', conn.connectionUpdate)
 conn.ev.off('creds.update', conn.credsUpdate)
 }
-
-// Verifica si global.handler.handler está definido antes de asignarlo
-if (global.handler && global.handler.handler) {
-    conn.handler = global.handler.handler.bind(global.conn)
-} else {
-    // Esto debería alertar si handler.js sigue teniendo errores de sintaxis
-    console.error(chalk.bold.redBright("ATENCIÓN: EL HANDLER NO SE HA CARGADO CORRECTAMENTE. REVISA handler.js"));
-    return false;
-}
-
+conn.handler = handler.handler.bind(global.conn)
 conn.connectionUpdate = connectionUpdate.bind(global.conn)
 conn.credsUpdate = saveCreds.bind(global.conn, true)
-
-// Lógica de chats de conexión (no crítica)
 const currentDateTime = new Date()
 const messageDateTime = new Date(conn.ev)
 if (currentDateTime >= messageDateTime) {
@@ -370,19 +358,16 @@ const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('
 } else {
 const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0])
 }
-
 conn.ev.on('messages.upsert', conn.handler)
 conn.ev.on('connection.update', conn.connectionUpdate)
 conn.ev.on('creds.update', conn.credsUpdate)
 isInit = false
 return true
 }
-
 setInterval(() => {
 console.log('[ 🐉 ]  Reiniciando...');
 process.exit(0)
 }, 10800000)
-
 let rtU = join(__dirname, `./${jadi}`)
 if (!existsSync(rtU)) {
 mkdirSync(rtU, { recursive: true }) 
@@ -403,7 +388,7 @@ for (const gjbts of readRutaJadiBot) {
 const botPath = join(rutaJadiBot, gjbts)
 const readBotPath = readdirSync(botPath)
 if (readBotPath.includes(creds)) {
-vegetaJadiBot({JadiBot: botPath, m: null, conn, args: '', usedPrefix: '/', command: 'serbot'})
+JadiBot({JadiBot: botPath, m: null, conn, args: '', usedPrefix: '/', command: 'serbot'})
 }}}}
 
 const pluginFolder = global.__dirname(join(__dirname, './plugins/index'))
@@ -509,7 +494,4 @@ unlinkSync(`./${jadi}/${directorio}/${fileInDir}`)
 if (SBprekey.length === 0) {
 console.log(chalk.bold.green(`\nꕥ ☁️No hay archivos en ${jadi} para eliminar SAIYAJIN🐉.`))
 } else {
-console.log(chalk.bold.cyanBright(`\n⌦ 🐉👑Archivos de la carpeta ${jadi} han sido eliminados correctamente`))
-}} catch (e) {
-console.error('Error en purgeSessionSB:', e);
-}}
+console.log(chalk.bold.cyanBright(`\n⌦ 🐉👑Archivos de la carpeta ${jadi} han sido eliminados correctamente

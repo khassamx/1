@@ -1,4 +1,4 @@
-// 📁 plugins/grupo-info.js (Versión Limpia sin Cálculos de Tiempo)
+// 📁 plugins/grupo-info-simple.js
 
 const handler = async (m, { conn, isOwner, participants, groupMetadata }) => {
     
@@ -7,7 +7,7 @@ const handler = async (m, { conn, isOwner, participants, groupMetadata }) => {
         return global.dfail('group', m, conn);
     }
     if (!isOwner) {
-        // Solo el Owner puede usarlo para obtener información sensible.
+        // Solo el Owner puede usarlo.
         return global.dfail('owner', m, conn); 
     }
 
@@ -24,39 +24,28 @@ const handler = async (m, { conn, isOwner, participants, groupMetadata }) => {
     }
 
     const {
-        id,
         subject, // Nombre del grupo
     } = groupMetadata;
-
-    // 3. CÁLCULO DE ESTADÍSTICAS
-    const memberCount = participants.length;
-    // Filtramos para contar todos los participantes que tienen la propiedad 'admin'
-    const adminCount = participants.filter(p => p.admin).length; 
     
-    // 4. ESTADO DEL BOT (Determinar si el bot es Admin)
+    // 3. ESTADO DEL BOT (Determinar si el bot es Admin)
+    // Busca la entrada del bot en la lista de participantes.
     const bot = participants.find(p => p.id === conn.user.jid) || {};
     const isBotAdmin = !!bot.admin;
 
     const botStatus = isBotAdmin ? '✅ Sí, el bot es ADMINISTRADOR.' : '❌ No, el bot NO es administrador.';
 
-    // 5. CONSTRUCCIÓN DEL MENSAJE
+    // 4. CONSTRUCCIÓN DEL MENSAJE
     const text = `
-╭──「 📝 **INFO DEL GRUPO** 」
+╭──「 📝 **INFO RÁPIDA** 」
 │ 
-│ *Nombre:* ${subject}
+│ *Nombre del Grupo:* ${subject}
 │ 
-│ *ID del Grupo:* ${id}
-│ 
-│ *Miembros Totales:* **${memberCount}**
-│ 
-│ *Administradores:* **${adminCount}**
-│ 
-│ *Estado del Bot:* ${botStatus}
+│ *El Bot es Admin:* ${botStatus}
 │
 ╰───────────────
 `.trim();
 
-    // 6. ENVÍO DEL MENSAJE
+    // 5. ENVÍO DEL MENSAJE
     conn.reply(m.chat, text, m);
 };
 

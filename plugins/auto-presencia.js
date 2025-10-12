@@ -1,82 +1,76 @@
 // 📁 plugins/auto-presencia.js
-// ⚠️ NOTA: Si este plugin se usa, la función 'setupAutoWritingAndReject' 
-// en handler.js debe ser ELIMINADA para evitar duplicidades.
 
-// Usamos Map, ya que usa .set() y guarda un timestamp para inactividad.
-if (!global.autoEscribiendo) global.autoEscribiendo = new Map();
+// Este plugin se ejecuta en todos los mensajes (handler.before o handler.all)
 
-// =============================================================
-// 💬 HANDLER PARA MARCAR PRESENCIA (Auto-escribiendo)
-// =============================================================
-// Se usa handler.all para interceptar cualquier mensaje.
-let handler = m => m; // Handler vacío, la lógica va en .all y .before
+const presenceModes = ['composing', 'recording', 'available'];
+const defaultPresence = 'composing';
+const defaultDuration = 4000; // 4 segundos
 
-handler.all = async function (m) {
-  const conn = this;
-  try {
-    // 1. Marca el chat como activo (actualiza el timestamp)
-    global.autoEscribiendo.set(m.chat, Date.now());
-
-    // 2. Simula "escribiendo" de forma instantánea al recibir mensaje
-    await conn.sendPresenceUpdate('composing', m.chat).catch(() => {});
+/**
+ * Función que se ejecuta en cada mensaje.
+ * Simula que el bot está escribiendo, grabando o disponible.
+ */
+export async function all(m, { conn }) {
     
-    // Si el chat ya estaba en "escribiendo" por el handler principal, 
-    // este lo reiniciará.
+    // Si el mensaje viene del bot o es un chat privado, salimos (opcional, puedes cambiar esto)
+    if (m.isBaileys || !m.isGroup) return true;
+
+    // 1. Obtener la configuración del chat (asumiendo que global.db.data.chats[m.chat] existe)
+    const chatDB = global.db.data.chats[m.chat];
     
-    // Si quieres un sistema de auto-escritura más avanzado, debes
-    // implementar un CRON Job o un setInterval fuera del handler.all.
+    // Si no hay configuración o la función no está activa en la DB
+    if (!chatDB || !chatDB.autoPresencia) return true; 
 
-  } catch (e) {
-    console.error('❌ Error en auto-presencia.all:', e);
-    global.autoEscribiendo.delete(m.chat);
-  }
-};
+    // Opcional: Obtener modo de presencia desde la DB (o usar el default)
+    const mode = chatDB.presenciaMode || defaultPresence; 
+    const duration = chatDB.presenciaDuration || defaultDuration;
+    
+    // 2. Validación y chequeo de modo
+    const validMode = presenceModes.includes(mode) ? mode : defaultPresence;
 
+    // 3. Establecer la presencia
+    try {
+        // [CORRECCIÓN CRÍTICA] Usamos .add() en el Set, no .set()
+        if (!global.autoEscribiendo.has(m.chat)) {
+            global.autoEscribiendo.add(m.chat);
+            
+            // Enviamos la actualización de presencia
+            await conn.sendPresenceUpdate(validMode, m.chat);
 
-// =============================================================
-// 📞 SISTEMA DE DETECCIÓN Y RECHAZO DE LLAMADAS
-// =============================================================
-handler.before = async function (m) {
-  const conn = this;
-  try {
-    if (!conn.callListenerAdded) {
-      conn.callListenerAdded = true;
-
-      conn.ev.on('call', async (call) => {
-        try {
-          const from = call?.from || call?.[0]?.from || call?.[0]?.participant;
-          if (!from) return;
-          console.log('📞 Llamada detectada de:', from);
-
-          // 1. Rechazo de llamada
-          if (typeof conn.rejectCall === 'function') {
-            await conn.rejectCall(from, call.id); // Asegurar el ID de llamada
-            console.log('❌ Llamada rechazada automáticamente.');
-          } else {
-            await conn.sendPresenceUpdate('unavailable', from);
-            console.log('⚠️ Método alternativo: presencia "unavailable".');
-          }
-
-          // 2. Aviso al usuario
-          await conn.sendMessage(from, {
-            text: '🚫 Las llamadas están desactivadas. Enviá tu mensaje escrito por favor.'
-          }).catch(() => {});
-
-        } catch (e) {
-          console.error('Error gestionando llamada:', e);
+            // Limpieza: Programamos la eliminación del chat del Set
+            setTimeout(async () => {
+                if (global.autoEscribiendo.has(m.chat)) {
+                    global.autoEscribiendo.delete(m.chat);
+                    await conn.sendPresenceUpdate('available', m.chat).catch(() => {});
+                }
+            }, duration); 
         }
-      });
 
-      console.log('✅ Sistema de rechazo de llamadas activado.');
+    } catch (e) {
+        // En caso de error, aseguramos la limpieza para no dejar el Set en estado inconsistente
+        console.error('❌ Error en auto-presencia.all:', e.message);
+        global.autoEscribiendo.delete(m.chat); 
     }
 
-  } catch (e) {
-    console.error('❌ Error inicializando rechazo de llamadas:', e);
-  }
+    return true; // Siempre devolver true
+}
+
+// ===================================================
+// ⚙️ NOTAS: CÓMO USAR ESTO
+// ===================================================
+
+// 1. Añadir la propiedad "autoPresencia" a tu defaultChat en handler.js (si no está):
+/*
+const defaultChat = {
+    // ... otras propiedades
+    autoPresencia: false, // <-- Añadir esto si no existe
+    presenciaMode: 'composing', // O 'recording', 'available'
+    presenciaDuration: 4000
 };
+*/
 
-export default handler;
+// 2. Activar/Desactivar usando el plugin grupo-config.js (si ya lo tienes):
+//    Añade 'autopresencia': 'autoPresencia' a las features en grupo-config.js
 
-// Tags o comandos opcionales para evitar que se cargue en modo admin
-handler.tags = ['owner']; 
-handler.private = true;
+//    Comando para activar: !enable autopresencia
+//    Comando para desactivar: !disable autopresencia

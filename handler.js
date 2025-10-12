@@ -30,6 +30,7 @@ const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), './pl
  * @param {object} conn Conexión de Baileys (this)
  */
 function setupAutoWritingAndReject(conn) {
+    // CRÍTICO: Aseguramos que sea un Set para el plugin auto-presencia.js
     if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
     
     // [LÓGICA DE PRESENCIA/AUTO-ESCRIBIENDO]
@@ -90,10 +91,8 @@ function loadPlugins() {
         if (!file.endsWith('.js') || file.startsWith('_')) continue;
         const pluginPath = path.join(pluginsDir, file);
         try {
-            // Utilizamos 'require' para módulos que pueden ser CommonJS o ES Module
-            // Se debe usar import(pluginPath) si todo el proyecto es ESM. Si usa require(), se necesita modificar el entorno.
-            // Para un entorno ESM puro, usamos import() dinámico:
-            const module = require(pluginPath).default || require(pluginPath); // Dejamos require por compatibilidad
+            // Utilizamos import() dinámico para ESM
+            const module = require(pluginPath).default || require(pluginPath); 
             global.plugins[file] = module;
             console.log(chalk.green(`✅ Plugin cargado: ${file}`));
         } catch (e) {
@@ -174,8 +173,8 @@ async function initializeDatabase(conn, m) {
         const defaultChat = {
             isBanned: false, sAutoresponder: '', welcome: true, autolevelup: false, autoresponder: false, 
             delete: false, autoAceptar: true, autoRechazar: true, detect: true, antiBot: true, 
-            antiBot2: true, modoadmin: false, antiLink: false, antiLink2: false, antifake: false, // antiLink: false y antiLink2: false por defecto
-            reaction: false, nsfw: false, expired: 0, antiLag: false, per: [],
+            antiBot2: true, modoadmin: false, antiLink: false, antiLink2: false, antifake: false, 
+            reaction: false, nsfw: false, expired: 0, antiLag: false, per: [], autoPresencia: false, presenciaMode: 'composing' // Añadido para auto-presencia.js
         };
 
         for (const key in defaultChat) {
@@ -249,6 +248,7 @@ function checkCommand(conn, m, plugin) {
 function checkPluginRequirements(conn, m, plugin, { isROwner, isOwner, isMods, isPrems, isAdmin, isBotAdmin, _user, usedPrefix }) {
     let fail = plugin.fail || global.dfail;
 
+    // CRÍTICO: Aseguramos que 'conn' se pase correctamente a dfail
     if (plugin.rowner && plugin.owner && !(isROwner || isOwner)) { fail('owner', m, conn); return false; }
     if (plugin.rowner && !isROwner) { fail('rowner', m, conn); return false; }
     if (plugin.owner && !isOwner) { fail('owner', m, conn); return false; }
@@ -259,8 +259,6 @@ function checkPluginRequirements(conn, m, plugin, { isROwner, isOwner, isMods, i
     if (plugin.admin && !isAdmin) { fail('admin', m, conn); return false; }
     if (plugin.private && m.isGroup) { fail('private', m, conn); return false; }
     
-    // Se eliminó la verificación de monedas aquí, ya que el plugin de tagall no tiene monedas.
-    // Si necesitas la verificación de monedas, debes reintroducirla con la lógica completa.
     
     if (plugin.level > _user.level) {
         conn.reply(m.chat, `❮🐉❯ Se requiere el nivel: *${plugin.level}*\n\n• Tu nivel actual es: *${_user.level}*\n\n• Usa este comando para subir de nivel:\n*${usedPrefix}levelup*`, m);
@@ -379,7 +377,8 @@ export async function handler(chatUpdate) {
             // -> Función .all()
             if (typeof plugin.all === 'function') {
                 try {
-                    await plugin.all.call(this, m, { chatUpdate, __dirname: ___dirname, __filename })
+                    // Pasamos la conexión 'this' como primer argumento para .all()
+                    await plugin.all.call(this, m, { chatUpdate, conn: this, __dirname: ___dirname, __filename }) 
                 } catch (e) {
                     console.error(e)
                 }
@@ -390,7 +389,7 @@ export async function handler(chatUpdate) {
             const { match, usedPrefix: prefixMatch, command, noPrefix, args, text, isAccept } = checkCommand(this, m, plugin);
             
             // -> Función .before()
-            if (typeof plugin.before === 'function' && (match || m.text)) { // Ejecutar .before en cualquier mensaje de texto
+            if (typeof plugin.before === 'function' && (match || m.text)) { 
                 const extraBefore = { match, conn: this, participants, groupMetadata, user, bot, isROwner, isOwner, isRAdmin, isAdmin, isBotAdmin, isPrems, chatUpdate, __dirname: ___dirname, __filename };
                 if (await plugin.before.call(this, m, extraBefore)) continue
             }
@@ -439,6 +438,7 @@ export async function handler(chatUpdate) {
                     m.reply(errorText)
                 }
             } finally {
+                // -> Función .after()
                 if (typeof plugin.after === 'function') {
                     try {
                         await plugin.after.call(this, m, extra)
@@ -462,7 +462,7 @@ export async function handler(chatUpdate) {
 
 
 // ===================================================
-// ⚠️ FUNCIÓN DE FALLO (DFAIL)
+// ⚠️ FUNCIÓN DE FALLO (DFAIL) - CORREGIDA
 // ===================================================
 
 global.dfail = (type, m, conn) => {
@@ -480,6 +480,12 @@ global.dfail = (type, m, conn) => {
     }
 
     const replyMsg = msg[type] || `⚠️ Error de permiso desconocido: ${type}`;
-    conn.reply(m.chat, replyMsg, m);
+    
+    // **CORRECCIÓN:** Uso seguro de conn.reply para evitar TypeError: Cannot read properties of undefined (reading 'reply')
+    if (conn && typeof conn.reply === 'function') {
+        conn.reply(m.chat, replyMsg, m);
+    } else {
+        console.error(`[DFAIL FALLBACK] Error de permiso: ${type} en chat: ${m.chat}`);
+    }
 
 }

@@ -1,13 +1,13 @@
-// 📁 plugins/menu.js (Versión con Botones Robusta)
+// 📁 plugins/menu.js (Versión con Botones Final y Corregida)
 
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
-import fs from 'fs'; // Necesario para la comprobación de archivos
+import fs from 'fs'; 
 
 // Mapeo de categorías a etiquetas de comando
 const categoryMap = {
     'Grupos': ['grupo'],
     'Descargas': ['descargas', 'sticker'], // Combina descargas y stickers
-    'Info/Utilidades': ['info', 'sistema'],
+    'Info/Utilidades': ['info', 'sistema', 'menu'], // Añadimos 'menu' a info
     'Creador/Owner': ['owner'],
 };
 
@@ -36,7 +36,8 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
         const plugin = global.plugins[name];
         
         if (plugin.command && !plugin.disabled && checkPermission(plugin)) {
-            const tags = Array.isArray(plugin.tags) ? tags : [plugin.tags];
+            // ❌ CORRECCIÓN CRÍTICA: Cambiamos 'tags' por 'plugin.tags' 
+            const tags = Array.isArray(plugin.tags) ? plugin.tags : [plugin.tags];
             
             for (const key in categoryMap) {
                 if (categoryMap[key].some(tag => tags.includes(tag))) {
@@ -46,7 +47,8 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
                             categorizedCommands[key].push(`!${cmd}`);
                         }
                     });
-                    break;
+                    // Agregamos break para evitar duplicados si un plugin tiene múltiples etiquetas en la misma categoría
+                    break; 
                 }
             }
         }
@@ -76,11 +78,13 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
     
     // Botones de Comando (Texto)
     for (const key in categorizedCommands) {
-        buttons.push({
-            buttonId: `${usedPrefix}comandos ${key}`, 
-            buttonText: { displayText: `❰ ${key} ❱` },
-            type: 1
-        });
+        if (categorizedCommands[key].length > 0) {
+            buttons.push({
+                buttonId: `${usedPrefix}comandos ${key}`, 
+                buttonText: { displayText: `❰ ${key} ❱` },
+                type: 1
+            });
+        }
     }
 
     // Botón de Enlace para el Creador
@@ -91,32 +95,29 @@ const handler = async (m, { conn, isOwner, isPrems, usedPrefix }) => {
     });
 
     
-    // 4. PREPARACIÓN DE LA IMAGEN (Punto de Falla)
+    // 4. PREPARACIÓN DE LA IMAGEN (Manejo de errores)
     let media = null;
     let caption = menuText;
     let footer = `🫡 Creador: ${global.owner[0][1] || 'Owner'} | ${global.dev}`;
 
     try {
         if (global.catalogo) {
-            // Intentamos obtener el archivo. conn.getFile es necesario aquí.
             media = await conn.getFile(global.catalogo);
-            // Si tiene datos válidos, usamos la imagen
             if (media?.data && media.data.length > 0) {
-                 media = media.data; // Usamos el buffer
+                 media = media.data; 
             } else {
-                 media = null; // Si no hay datos, volvemos a null para usar solo texto
+                 media = null; 
                  console.log('⚠️ Aviso: La URL del catálogo no devolvió datos válidos. Usando solo texto.');
             }
         }
     } catch (e) {
         console.error('❌ Error al obtener la imagen del catálogo para el menú:', e.message);
-        media = null; // Forzamos a que sea un mensaje de solo texto
+        media = null; 
     }
     
     // 5. ENVÍO ROBUSTO DEL MENSAJE
     
     if (media) {
-        // Enviar con imagen si el buffer es válido
         const buttonMessage = {
             image: media, 
             caption: caption,

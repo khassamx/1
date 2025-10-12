@@ -33,7 +33,7 @@ const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), './pl
 function setupAutoWritingAndReject(conn) {
     // CRÍTICO: Aseguramos que sea un Set para el plugin auto-presencia.js
     if (!global.autoEscribiendo) global.autoEscribiendo = new Set();
-    
+
     // [LÓGICA DE PRESENCIA/AUTO-ESCRIBIENDO]
     if (!conn.presenceListenerAdded) {
         conn.presenceListenerAdded = true;
@@ -42,7 +42,7 @@ function setupAutoWritingAndReject(conn) {
             if (chat && global.autoEscribiendo.has(chat)) {
                 // Si el chat está en el Set, actualiza la presencia
                 conn.sendPresenceUpdate('composing', chat).catch(() => global.autoEscribiendo.delete(chat));
-                
+
                 // Limpieza después de un tiempo corto si el plugin no lo hizo
                 setTimeout(() => {
                     if (global.autoEscribiendo.has(chat)) {
@@ -62,17 +62,17 @@ function setupAutoWritingAndReject(conn) {
                 const from = call?.from || call?.[0]?.from || call?.[0]?.participant;
                 if (!from) return;
                 console.log(chalk.yellow('📞 Llamada detectada de:'), from);
-                
+
                 // 1. Rechazo de la llamada
                 if (typeof conn.rejectCall === 'function') {
                     await conn.rejectCall(from, call.id); // Usamos el ID de la llamada
                 } else {
                     await conn.sendPresenceUpdate('unavailable', from);
                 }
-                
+
                 // 2. Aviso al usuario
                 await conn.sendMessage(from, { text: '🚫 Las llamadas están desactivadas. Por favor, envía un mensaje de texto.' }).catch(() => {});
-                
+
             } catch (e) {
                 console.error(chalk.red('❌ Error gestionando llamada:'), e);
             }
@@ -152,7 +152,7 @@ async function initializeDatabase(conn, m) {
     try {
         let user = global.db.data.users[m.sender];
         if (typeof user !== 'object') global.db.data.users[m.sender] = {};
-        
+
         const defaultUser = {
             exp: 0, coin: 10, joincount: 1, diamond: 3, lastadventure: 0, health: 100, 
             lastclaim: 0, lastcofre: 0, lastdiamantes: 0, lastcode: 0, lastduel: 0, 
@@ -161,16 +161,16 @@ async function initializeDatabase(conn, m) {
             name: m.name, age: -1, regTime: -1, afk: -1, afkReason: '', banned: false, 
             useDocument: false, bank: 0, level: 0, role: 'Nuv', premium: false, premiumTime: 0
         };
-        
+
         for (const key in defaultUser) {
             if (typeof user !== 'object' || !(key in user) || (typeof defaultUser[key] === 'number' && !isNumber(user[key]))) {
                 global.db.data.users[m.sender][key] = defaultUser[key];
             }
         }
-        
+
         let chat = global.db.data.chats[m.chat];
         if (typeof chat !== 'object') global.db.data.chats[m.chat] = {};
-        
+
         // Estructura de chat
         const defaultChat = {
             isBanned: false, sAutoresponder: '', welcome: true, autolevelup: false, autoresponder: false, 
@@ -184,14 +184,14 @@ async function initializeDatabase(conn, m) {
                 global.db.data.chats[m.chat][key] = defaultChat[key];
             }
         }
-        
+
         let settings = global.db.data.settings[conn.user.jid];
         if (typeof settings !== 'object') global.db.data.settings[conn.user.jid] = {};
-        
+
         const defaultSettings = {
             self: false, restrict: true, jadibotmd: true, antiPrivate: false, autoread: false, status: 0
         };
-        
+
         for (const key in defaultSettings) {
              if (typeof settings !== 'object' || !(key in settings)) {
                 global.db.data.settings[conn.user.jid][key] = defaultSettings[key];
@@ -209,7 +209,7 @@ async function initializeDatabase(conn, m) {
 function checkCommand(conn, m, plugin) {
     const str2Regex = str => str.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&');
     let _prefix = (plugin.customPrefix ? [plugin.customPrefix] : []).concat(global.db.data.settings[conn.user.jid]?.prefix || global.prefix);
-    
+
     let match = (_prefix instanceof RegExp ?
         [[_prefix.exec(m.text), _prefix]] :
         Array.isArray(_prefix) ?
@@ -235,7 +235,7 @@ function checkCommand(conn, m, plugin) {
             typeof plugin.command === 'string' ?
                 plugin.command === command :
                 false;
-    
+
     if ((m.id.startsWith('NJX-') || (m.id.startsWith('BAE5') && m.id.length === 16) || (m.id.startsWith('B24E') && m.id.length === 20))) {
         isAccept = false;
     }
@@ -260,8 +260,8 @@ function checkPluginRequirements(conn, m, plugin, { isROwner, isOwner, isMods, i
     if (plugin.botAdmin && !isBotAdmin) { fail('botAdmin', m, conn); return false; } 
     if (plugin.admin && !isAdmin) { fail('admin', m, conn); return false; }
     if (plugin.private && m.isGroup) { fail('private', m, conn); return false; }
-    
-    
+
+
     if (plugin.level > _user.level) {
         conn.reply(m.chat, `❮🐉❯ Se requiere el nivel: *${plugin.level}*\n\n• Tu nivel actual es: *${_user.level}*\n\n• Usa este comando para subir de nivel:\n*${usedPrefix}levelup*`, m);
         return false;
@@ -278,7 +278,7 @@ async function finalLogic(conn, m) {
         const quequeIndex = conn.msgqueque.indexOf(m.id || m.key.id)
         if (quequeIndex !== -1) conn.msgqueque.splice(quequeIndex, 1)
     }
-    
+
     if (m) { 
         let utente = global.db.data.users[m.sender]
         // Lógica de Muteo
@@ -291,7 +291,8 @@ async function finalLogic(conn, m) {
         // Lógica de Economía y XP
         if (m.sender && global.db.data.users[m.sender]) {
             global.db.data.users[m.sender].exp += m.exp
-            global.db.data.users[m.sender].monedas -= m.monedas * 1 // Resta si el plugin define 'm.monedas'
+            // Aseguramos que m.monedas es un número antes de restar
+            global.db.data.users[m.sender].monedas -= (m.monedas ? m.monedas * 1 : 0)
         }
 
         // Lógica de Estadísticas
@@ -299,7 +300,7 @@ async function finalLogic(conn, m) {
             let now = +new Date
             let stats = global.db.data.stats
             let stat = stats[m.plugin] = stats[m.plugin] || { total: 0, success: 0, last: now, lastSuccess: now };
-            
+
             stat.total += 1
             stat.last = now
             if (m.error == null) {
@@ -308,7 +309,7 @@ async function finalLogic(conn, m) {
             }
         }
     }
-    
+
     try {
         if (!opts['noprint']) await (await import('./utils/print.js')).default(m, conn)
     } catch (e) {
@@ -394,14 +395,14 @@ export async function handler(chatUpdate) {
             global.allowedGroups = global.allowedGroups || new Set();
 
             if (m.isGroup && !global.allowedGroups.has(m.chat)) {
-                
+
                 // Comandos que SIEMPRE están permitidos para el Creador (Owner)
                 const allowedCommands = ['owner', 'addgrupo', 'removegrupo', 'addbotx', 'menu', 'menú', 'help']; 
-                
+
                 // Si el comando es de Owner (tags: ['owner']) O es uno de los comandos de activación/menú
                 const isControlCommand = (plugin.tags && plugin.tags.includes('owner')) || 
                                          allowedCommands.some(cmd => plugin.command && (Array.isArray(plugin.command) ? plugin.command.includes(cmd) : plugin.command === cmd));
-                
+
                 if (isControlCommand) {
                     // Permitido: Solo el Owner/Moderador/etc. puede ver el menú o activar el grupo
                 } 
@@ -415,14 +416,14 @@ export async function handler(chatUpdate) {
 
             // -> Comprobación de Prefijo y Comando
             const { match, usedPrefix: prefixMatch, command, noPrefix, args, text, isAccept } = checkCommand(this, m, plugin);
-            
+
             // -> Función .before()
             if (typeof plugin.before === 'function' && (match || m.text)) { 
                 const extraBefore = { match, conn: this, participants, groupMetadata, user, bot, isROwner, isOwner, isRAdmin, isAdmin, isBotAdmin, isPrems, chatUpdate, __dirname: ___dirname, __filename };
                 if (await plugin.before.call(this, m, extraBefore)) continue
             }
             if (typeof plugin !== 'function' || !match || !(usedPrefix = prefixMatch) || !isAccept) continue;
-            
+
             m.plugin = name
             global.comando = command
 
@@ -430,97 +431,58 @@ export async function handler(chatUpdate) {
             if (m.chat in global.db.data.chats || m.sender in global.db.data.users) {
                 const userDB = global.db.data.users[m.sender];
                 const chatDB = global.db.data.chats[m.chat];
-                
+
                 if (chatDB?.isBanned && !isROwner && !['grupo-unbanchat.js'].includes(name)) return;
-                
+
                 if (m.text && userDB?.banned && !isROwner && name !== 'owner-unbanuser.js') {
                     // Usamos m.reply para que mencione al usuario baneado
                     m.reply(`《🐉》@${m.sender.split('@')[0]} estás baneado/a, no puedes usar comandos en este bot!\n\n${userDB.bannedReason ? `☁️ Motivo: ${userDB.bannedReason}` : '🔮 *Motivo:* Sin Especificar'}\n\n> 👑 Si este Bot es cuenta oficial y tiene evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.`, null, { mentions: [m.sender] });
                     return;
                 }
             }
-            
+
             let adminMode = global.db.data.chats[m.chat].modoadmin
             let mini = (plugin.botAdmin || plugin.admin || plugin.group || plugin.command || noPrefix || usedPrefix ||  m.text.slice(0, 1) == usedPrefix) 
             if (adminMode && !isOwner && !isROwner && m.isGroup && !isAdmin && mini) continue
-            
+
             // -> Comprobación de Requisitos (Roles y Economía)
             if (!checkPluginRequirements(this, m, plugin, { isROwner, isOwner, isMods, isPrems, isAdmin, isBotAdmin, _user, usedPrefix })) continue;
-            
+
             // -> Ejecución Final
             m.isCommand = true
             let xp = 'exp' in plugin ? parseInt(plugin.exp) : 10
             m.exp += xp
-            
+
             let extra = { match, usedPrefix, noPrefix, args, command, text, conn: this, participants, groupMetadata, user, bot, isROwner, isOwner, isRAdmin, isAdmin, isBotAdmin, isPrems, chatUpdate, __dirname: ___dirname, __filename };
             
             try {
-                await plugin.call(this, m, extra)
-                if (!isPrems) m.monedas = m.monedas || plugin.monedas || false
+                await plugin.handle.call(this, m, extra); 
             } catch (e) {
-                m.error = e
-                console.error(e)
-                if (e) {
-                    let errorText = format(e)
-                    for (let key of Object.values(global.APIKeys || {}))
-                        errorText = errorText.replace(new RegExp(key, 'g'), 'Administrador')
-                    m.reply(errorText)
-                }
-            } finally {
-                // -> Función .after()
-                if (typeof plugin.after === 'function') {
-                    try {
-                        await plugin.after.call(this, m, extra)
-                    } catch (e) {
-                        console.error(e)
-                    }
-                }
-                if (m.monedas) {
-                    this.reply(m.chat, `❮🐉❯ Utilizaste ${+m.monedas} monedas.`, m) 
-                }
+                m.error = e;
+                console.error(chalk.red(`❌ ERROR DE EJECUCIÓN en ${name}:`), e);
+                this.reply(m.chat, format(e), m); 
             }
-            break
         }
     } catch (e) {
-        console.error(e)
+        m.error = e;
+        console.error(chalk.red('❌ ERROR EN HANDLER GLOBAL:'), e);
+        
     } finally {
-        // 5. Lógica Final (Cola, Mute, Stats y Autoread)
         await finalLogic(this, m);
     }
 }
 
+// Recarga del archivo handler.js
+let file = fileURLToPath(import.meta.url)
+watchFile(file, async () => {
+    unwatchFile(file)
+    console.log(chalk.redBright("Se actualizó 'handler.js'"))
+    delete import.meta.url
+    global.reloadHandler(false).catch(console.error)
+})
 
-// ===================================================
-// ⚠️ FUNCIÓN DE FALLO (DFAIL) - CORREGIDA CON MENCIÓN
-// ===================================================
-
-global.dfail = (type, m, conn) => {
-
-    const msg = {
-        rowner: '🐉El comando solo puede ser usado por los **creadores** del bot SAIYAJIN☁️.',
-        owner: '🐉El comando solo puede ser usado por los **desarrolladores** del bot SAIYAJIN☁️.',
-        mods: '🐉El comando solo puede ser usado por los **moderadores** del bot SAIYAJIN☁️.',
-        premium: '🐉El comando solo puede ser usado por los **usuarios premium** SAIYAJIN☁️.',
-        group: '🐉El comando solo puede ser usado en **grupos** SAIYAJIN☁️.',
-        private: '🐉El comando solo puede ser usado **al privado** SAIYAJIN☁️.',
-        botAdmin: `🐉Necesito ser **Administrador** para ejecutar el comando en este grupo SAIYAJIN☁️.`,
-        admin: `🐉El comando es solo para **Administradores** del grupo SAIYAJIN☁️.`,
-        unreg: `Para usar el bot, @${m.sender.split('@')[0]} debes registrarte con ${global.prefix[0]}reg (nombre.edad) SAIYAJIN☁️.`,
-    }
-
-    const replyMsg = msg[type] || `⚠️ Error de permiso desconocido: ${type}`;
-    
-    // Si el mensaje incluye mención (como en 'unreg'), la mención se pasa como texto.
-    // Si el mensaje no incluye mención, m.reply lo gestiona como una respuesta que visualmente lo menciona.
-    const mentions = replyMsg.includes(`@${m.sender.split('@')[0]}`) ? [m.sender] : [];
-
-    if (m && typeof m.reply === 'function') {
-        m.reply(replyMsg, null, { mentions });
-    } else if (conn && typeof conn.reply === 'function') {
-         // Fallback por si m.reply no está disponible
-        conn.reply(m.chat, replyMsg, m, { mentions }); 
-    } else {
-        console.error(`[DFAIL FALLBACK] Error de permiso: ${type} en chat: ${m.chat}`);
-    }
-
+// Exportación final que index.js espera
+export default {
+    handler,
+    // Otras propiedades si son necesarias
 }

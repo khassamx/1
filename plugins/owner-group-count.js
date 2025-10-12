@@ -1,4 +1,4 @@
-// 📁 plugins/grupo-info.js (Versión con Date Nativo, más robusta)
+// 📁 plugins/grupo-info.js (Versión Limpia sin Cálculos de Tiempo)
 
 const handler = async (m, { conn, isOwner, participants, groupMetadata }) => {
     
@@ -24,43 +24,28 @@ const handler = async (m, { conn, isOwner, participants, groupMetadata }) => {
     }
 
     const {
+        id,
         subject, // Nombre del grupo
-        creation, // Timestamp de creación del grupo (en segundos)
     } = groupMetadata;
 
     // 3. CÁLCULO DE ESTADÍSTICAS
     const memberCount = participants.length;
-    const adminCount = participants.filter(p => p.admin).length;
+    // Filtramos para contar todos los participantes que tienen la propiedad 'admin'
+    const adminCount = participants.filter(p => p.admin).length; 
     
-    // 4. TIEMPO DESDE CREACIÓN (Usando Date nativo para robustez)
-    const creationTimeMs = creation * 1000;
-    const creationDate = new Date(creationTimeMs);
-    
-    // Formateo simple de fecha
-    const creationTimeText = creationDate.toLocaleString('es-ES', { 
-        year: 'numeric', month: '2-digit', day: '2-digit', 
-        hour: '2-digit', minute: '2-digit', second: '2-digit' 
-    });
-    
-    // Calcular tiempo transcurrido (días, horas, minutos)
-    const diff = Date.now() - creationTimeMs;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    const timeSinceCreation = `${days} días, ${hours} horas, ${minutes} minutos`;
-    
-    // 5. ESTADO DEL BOT (Determinar si el bot es Admin)
+    // 4. ESTADO DEL BOT (Determinar si el bot es Admin)
     const bot = participants.find(p => p.id === conn.user.jid) || {};
     const isBotAdmin = !!bot.admin;
 
     const botStatus = isBotAdmin ? '✅ Sí, el bot es ADMINISTRADOR.' : '❌ No, el bot NO es administrador.';
 
-    // 6. CONSTRUCCIÓN DEL MENSAJE
+    // 5. CONSTRUCCIÓN DEL MENSAJE
     const text = `
 ╭──「 📝 **INFO DEL GRUPO** 」
 │ 
 │ *Nombre:* ${subject}
+│ 
+│ *ID del Grupo:* ${id}
 │ 
 │ *Miembros Totales:* **${memberCount}**
 │ 
@@ -68,13 +53,10 @@ const handler = async (m, { conn, isOwner, participants, groupMetadata }) => {
 │ 
 │ *Estado del Bot:* ${botStatus}
 │
-│ *Creado el:* ${creationTimeText}
-│ 
-│ *Tiempo desde Creación:* ${timeSinceCreation}
 ╰───────────────
 `.trim();
 
-    // 7. ENVÍO DEL MENSAJE
+    // 6. ENVÍO DEL MENSAJE
     conn.reply(m.chat, text, m);
 };
 

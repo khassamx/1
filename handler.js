@@ -92,7 +92,7 @@ function loadPlugins() {
         const pluginPath = path.join(pluginsDir, file);
         try {
             // Utilizamos import() dinámico para ESM
-            const module = require(pluginPath).default || require(pluginPath); 
+            const module = (await import(pluginPath)).default || (await import(pluginPath)); 
             global.plugins[file] = module;
             console.log(chalk.green(`✅ Plugin cargado: ${file}`));
         } catch (e) {
@@ -102,7 +102,7 @@ function loadPlugins() {
 }
 
 // Carga de plugins al inicio
-loadPlugins();
+await loadPlugins(); // Usamos await aquí para esperar la carga
 console.log(chalk.yellow(`💡 Se cargaron ${Object.keys(global.plugins).length} plugins.`));
 
 
@@ -139,8 +139,9 @@ async function defineRolesAndPermissions(conn, m) {
     const isRAdmin = (user && user.admin) === 'superadmin';
     const isAdmin = isRAdmin || ((user && user.admin) === 'admin');
     const isBotAdmin = !!(bot && bot.admin);
+    const isMods = global.mods.map(v => v.replace(/[^0-9]/g, "") + detectwhat).includes(m.sender); // Definición de Mods
 
-    return { isROwner, isOwner, isPrems, senderLid, botLid, user, bot, isRAdmin, isAdmin, isBotAdmin, participants, groupMetadata };
+    return { isROwner, isOwner, isPrems, senderLid, botLid, user, bot, isRAdmin, isAdmin, isBotAdmin, participants, groupMetadata, isMods };
 }
 
 /**
@@ -169,12 +170,12 @@ async function initializeDatabase(conn, m) {
         let chat = global.db.data.chats[m.chat];
         if (typeof chat !== 'object') global.db.data.chats[m.chat] = {};
         
-        // ¡IMPORTANTE! Se agregó antiLink2 para el plugin avanzado
+        // ¡IMPORTANTE! Estructura de chat con antiLink2 y autoPresencia
         const defaultChat = {
             isBanned: false, sAutoresponder: '', welcome: true, autolevelup: false, autoresponder: false, 
             delete: false, autoAceptar: true, autoRechazar: true, detect: true, antiBot: true, 
             antiBot2: true, modoadmin: false, antiLink: false, antiLink2: false, antifake: false, 
-            reaction: false, nsfw: false, expired: 0, antiLag: false, per: [], autoPresencia: false, presenciaMode: 'composing' // Añadido para auto-presencia.js
+            reaction: false, nsfw: false, expired: 0, antiLag: false, per: [], autoPresencia: false, presenciaMode: 'composing'
         };
 
         for (const key in defaultChat) {
@@ -351,7 +352,7 @@ export async function handler(chatUpdate) {
         globalThis.setting = global.db.data.settings[this.user.jid]
 
         // 2. Definición de Roles y Permisos
-        const { isROwner, isOwner, isPrems, senderLid, botLid, user, bot, isRAdmin, isAdmin, isBotAdmin, participants, groupMetadata } = await defineRolesAndPermissions(this, m);
+        const { isROwner, isOwner, isPrems, senderLid, botLid, user, bot, isRAdmin, isAdmin, isBotAdmin, participants, groupMetadata, isMods } = await defineRolesAndPermissions(this, m);
 
         // 3. Lógica de Cola y Mensajes de Baileys
         if (opts["queque"] && m.text && !(isMods)) {
@@ -462,7 +463,7 @@ export async function handler(chatUpdate) {
 
 
 // ===================================================
-// ⚠️ FUNCIÓN DE FALLO (DFAIL) - CORREGIDA
+// ⚠️ FUNCIÓN DE FALLO (DFAIL) - CORREGIDA (Línea 600+)
 // ===================================================
 
 global.dfail = (type, m, conn) => {
@@ -481,7 +482,7 @@ global.dfail = (type, m, conn) => {
 
     const replyMsg = msg[type] || `⚠️ Error de permiso desconocido: ${type}`;
     
-    // **CORRECCIÓN:** Uso seguro de conn.reply para evitar TypeError: Cannot read properties of undefined (reading 'reply')
+    // **CORRECCIÓN CRÍTICA:** Uso seguro de conn.reply
     if (conn && typeof conn.reply === 'function') {
         conn.reply(m.chat, replyMsg, m);
     } else {

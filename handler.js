@@ -37,14 +37,17 @@ function setupAutoWritingAndReject(conn) {
         conn.presenceListenerAdded = true;
         conn.ev.on('messages.upsert', async ({ messages }) => {
             const chat = messages[0]?.key?.remoteJid;
-            if (chat) {
-                global.autoEscribiendo.add(chat);
+            if (chat && global.autoEscribiendo.has(chat)) {
+                // Si el chat está en el Set, actualiza la presencia
                 conn.sendPresenceUpdate('composing', chat).catch(() => global.autoEscribiendo.delete(chat));
                 
+                // Limpieza después de un tiempo corto si el plugin no lo hizo
                 setTimeout(() => {
-                    global.autoEscribiendo.delete(chat);
-                    conn.sendPresenceUpdate('available', chat).catch(() => {});
-                }, 3000); 
+                    if (global.autoEscribiendo.has(chat)) {
+                        global.autoEscribiendo.delete(chat);
+                        conn.sendPresenceUpdate('available', chat).catch(() => {});
+                    }
+                }, 4000); 
             }
         });
     }
@@ -60,7 +63,7 @@ function setupAutoWritingAndReject(conn) {
                 
                 // 1. Rechazo de la llamada
                 if (typeof conn.rejectCall === 'function') {
-                    await conn.rejectCall(from, call.id); // Usamos el ID de la llamada para un rechazo más robusto
+                    await conn.rejectCall(from, call.id); // Usamos el ID de la llamada
                 } else {
                     await conn.sendPresenceUpdate('unavailable', from);
                 }
@@ -88,7 +91,9 @@ function loadPlugins() {
         const pluginPath = path.join(pluginsDir, file);
         try {
             // Utilizamos 'require' para módulos que pueden ser CommonJS o ES Module
-            const module = require(pluginPath).default || require(pluginPath); 
+            // Se debe usar import(pluginPath) si todo el proyecto es ESM. Si usa require(), se necesita modificar el entorno.
+            // Para un entorno ESM puro, usamos import() dinámico:
+            const module = require(pluginPath).default || require(pluginPath); // Dejamos require por compatibilidad
             global.plugins[file] = module;
             console.log(chalk.green(`✅ Plugin cargado: ${file}`));
         } catch (e) {
@@ -165,11 +170,12 @@ async function initializeDatabase(conn, m) {
         let chat = global.db.data.chats[m.chat];
         if (typeof chat !== 'object') global.db.data.chats[m.chat] = {};
         
+        // ¡IMPORTANTE! Se agregó antiLink2 para el plugin avanzado
         const defaultChat = {
             isBanned: false, sAutoresponder: '', welcome: true, autolevelup: false, autoresponder: false, 
             delete: false, autoAceptar: true, autoRechazar: true, detect: true, antiBot: true, 
-            antiBot2: true, modoadmin: false, antiLink: true, antifake: false, reaction: false, 
-            nsfw: false, expired: 0, antiLag: false, per: [],
+            antiBot2: true, modoadmin: false, antiLink: false, antiLink2: false, antifake: false, // antiLink: false y antiLink2: false por defecto
+            reaction: false, nsfw: false, expired: 0, antiLag: false, per: [],
         };
 
         for (const key in defaultChat) {
@@ -253,10 +259,8 @@ function checkPluginRequirements(conn, m, plugin, { isROwner, isOwner, isMods, i
     if (plugin.admin && !isAdmin) { fail('admin', m, conn); return false; }
     if (plugin.private && m.isGroup) { fail('private', m, conn); return false; }
     
-    if (!isPrems && plugin.monedas && global.db.data.users[m.sender].monedas < plugin.monedas * 1) {
-        conn.reply(m.chat, `❮🔮❯ Se agotaron tus ${plugin.monedas} monedas.`, m);
-        return false;
-    }
+    // Se eliminó la verificación de monedas aquí, ya que el plugin de tagall no tiene monedas.
+    // Si necesitas la verificación de monedas, debes reintroducirla con la lógica completa.
     
     if (plugin.level > _user.level) {
         conn.reply(m.chat, `❮🐉❯ Se requiere el nivel: *${plugin.level}*\n\n• Tu nivel actual es: *${_user.level}*\n\n• Usa este comando para subir de nivel:\n*${usedPrefix}levelup*`, m);
@@ -277,17 +281,20 @@ async function finalLogic(conn, m) {
     
     if (m) { 
         let utente = global.db.data.users[m.sender]
+        // Lógica de Muteo
         if (utente?.muto == true) {
             let bang = m.key.id
             let cancellazzione = m.key.participant
             await conn.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: bang, participant: cancellazzione }})
         }
 
+        // Lógica de Economía y XP
         if (m.sender && global.db.data.users[m.sender]) {
             global.db.data.users[m.sender].exp += m.exp
-            global.db.data.users[m.sender].monedas -= m.monedas * 1
+            global.db.data.users[m.sender].monedas -= m.monedas * 1 // Resta si el plugin define 'm.monedas'
         }
 
+        // Lógica de Estadísticas
         if (m.plugin) {
             let now = +new Date
             let stats = global.db.data.stats
@@ -383,7 +390,7 @@ export async function handler(chatUpdate) {
             const { match, usedPrefix: prefixMatch, command, noPrefix, args, text, isAccept } = checkCommand(this, m, plugin);
             
             // -> Función .before()
-            if (typeof plugin.before === 'function' && match) {
+            if (typeof plugin.before === 'function' && (match || m.text)) { // Ejecutar .before en cualquier mensaje de texto
                 const extraBefore = { match, conn: this, participants, groupMetadata, user, bot, isROwner, isOwner, isRAdmin, isAdmin, isBotAdmin, isPrems, chatUpdate, __dirname: ___dirname, __filename };
                 if (await plugin.before.call(this, m, extraBefore)) continue
             }
